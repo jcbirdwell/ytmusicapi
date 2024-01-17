@@ -9,7 +9,6 @@ from unittest import mock
 import pytest
 from requests import Response
 
-from ytmusicapi.auth.oauth import OAuthToken
 from ytmusicapi.auth.types import AuthType
 from ytmusicapi.constants import OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET
 from ytmusicapi.setup import main
@@ -57,7 +56,7 @@ class TestOAuth:
             oauth_token = json.loads(oauth_file.read())
 
         assert oauth_token["expires_at"] != 0
-        assert OAuthToken.is_oauth(oauth_token)
+        assert AuthType.is_oauth(oauth_token)
 
         oauth_file.close()
         os.unlink(oauth_filepath)
@@ -71,16 +70,17 @@ class TestOAuth:
             first_json = json.load(f)
 
         # pull reference values from underlying token
-        first_token = yt_oauth._token.access_token
-        first_expire = yt_oauth._token.expires_at
-        # make token expire
-        yt_oauth._token.expires_at = int(time.time())
+        first_token = yt_oauth._token.token.access_token
+        first_expire = yt_oauth._token.token.expires_at
+
+        # make token expire, by directly setting protected attribute of inner token
+        yt_oauth._token.token._expires_at = int(time.time())
         # check
-        assert yt_oauth._token.is_expiring
+        assert yt_oauth._token.token.is_expiring
         # pull new values, assuming token will be refreshed on access
         second_token = yt_oauth._token.access_token
-        second_expire = yt_oauth._token.expires_at
-        second_token_inner = yt_oauth._token.access_token
+        second_expire = yt_oauth._token.token.expires_at
+        second_token_inner = yt_oauth._token.token.access_token
         # check it was refreshed
         assert first_token != second_token
         # check expiration timestamps to confirm

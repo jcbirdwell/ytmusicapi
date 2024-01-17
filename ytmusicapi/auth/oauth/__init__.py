@@ -1,4 +1,5 @@
+from .token import OAuthToken, Token
 from .credentials import OAuthCredentials
-from .token import OAuthToken, RefreshingToken
+from .refreshing import RefreshingToken
 
-__all__ = ["OAuthCredentials", "OAuthToken", "RefreshingToken"]
+__all__ = ["OAuthCredentials", "OAuthToken", "RefreshingToken", "Token"]

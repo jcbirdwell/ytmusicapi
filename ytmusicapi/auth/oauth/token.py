@@ -1,31 +1,23 @@
 import json
-import os
 import time
-import webbrowser
-from dataclasses import dataclass
+from abc import ABC
 from typing import Optional
 
-from requests.structures import CaseInsensitiveDict
-
-from ytmusicapi.auth.oauth.credentials import Credentials
-from ytmusicapi.auth.oauth.models import BaseTokenDict, Bearer, DefaultScope, RefreshableTokenDict
+from .exceptions import BadToken
+from .models import Bearer, DefaultScope, RefreshableTokenDict, APITokenDict
 
 
-@dataclass
-class Token:
+class Token(ABC):
     """Base class representation of the YouTubeMusicAPI OAuth token."""
 
-    scope: DefaultScope
-    token_type: Bearer
+    _access_token: str
+    _refresh_token: str
+    _expires_in: int
+    _expires_at: int
+    _is_expiring: bool
 
-    access_token: str
-    refresh_token: str
-    expires_at: int = 0
-    expires_in: int = 0
-
-    @staticmethod
-    def members():
-        return Token.__annotations__.keys()
+    _scope: DefaultScope
+    _token_type: Bearer
 
     def __repr__(self) -> str:
         """Readable version."""
@@ -33,7 +25,13 @@ class Token:
 
     def as_dict(self) -> RefreshableTokenDict:
         """Returns dictionary containing underlying token values."""
-        return {key: self.__dict__[key] for key in Token.members()}  # type: ignore
+        return {
+            "access_token": self.access_token,
+            "refresh_token": self.refresh_token,
+            "scope": self.scope,
+            "expires_at": self.expires_at,
+            "token_type": self.token_type,
+        }
 
     def as_json(self) -> str:
         return json.dumps(self.as_dict())
@@ -43,6 +41,30 @@ class Token:
         return f"{self.token_type} {self.access_token}"
 
     @property
+    def access_token(self) -> str:
+        return self._access_token
+
+    @property
+    def refresh_token(self) -> str:
+        return self._refresh_token
+
+    @property
+    def token_type(self) -> Bearer:
+        return self._token_type
+
+    @property
+    def scope(self) -> DefaultScope:
+        return self._scope
+
+    @property
+    def expires_at(self) -> int:
+        return self._expires_at
+
+    @property
+    def expires_in(self) -> int:
+        return self._expires_in
+
+    @property
     def is_expiring(self) -> bool:
         return self.expires_in < 60
 
@@ -50,97 +72,51 @@ class Token:
 class OAuthToken(Token):
     """Wrapper for an OAuth token implementing expiration methods."""
 
-    @staticmethod
-    def is_oauth(headers: CaseInsensitiveDict) -> bool:
-        return all(key in headers for key in Token.members())
+    def __init__(
+        self,
+        access_token: str,
+        refresh_token: str,
+        scope: str,
+        token_type: str,
+        expires_at: Optional[int] = None,
+        expires_in: Optional[int] = None,
+    ):
+        """
 
-    def update(self, fresh_access: BaseTokenDict):
+        :param access_token: active oauth key
+        :param refresh_token: access_token's matching oauth refresh string
+        :param scope: most likely 'https://www.googleapis.com/auth/youtube'
+        :param token_type: commonly 'Bearer'
+        :param expires_at: Optional. Unix epoch (seconds) of access token expiration.
+        :param expires_in: Optional. Seconds till expiration, assumes/calculates epoch of init.
+
+        """
+        # match baseclass attribute/property format
+        self._access_token = access_token
+        self._refresh_token = refresh_token
+        self._scope = scope
+        self._token_type = token_type
+
+        # set/calculate token expiration using current epoch
+        if not (expires_at or expires_in):
+            raise BadToken('Token must have either expires_at or expires_in passed.')
+
+        self._expires_at: int = expires_at if expires_at else int(time.time()) + expires_in
+        self._expires_in: int = expires_in
+
+    def update(self, fresh_access: APITokenDict):
         """
         Update access_token and expiration attributes with a BaseTokenDict inplace.
         expires_at attribute set using current epoch, avoid expiration desync
         by passing only recently requested tokens dicts or updating values to compensate.
         """
-        self.access_token = fresh_access["access_token"]
-        self.expires_at = int(time.time()) + fresh_access["expires_in"]
+        self._access_token = fresh_access["access_token"]
+        self._expires_at = int(time.time() + fresh_access["expires_in"])
+
+    @property
+    def expires_in(self) -> int:
+        return int(self.expires_at - time.time())
 
     @property
     def is_expiring(self) -> bool:
-        return self.expires_at - int(time.time()) < 60
-
-    @classmethod
-    def from_json(cls, file_path: str) -> "OAuthToken":
-        if os.path.isfile(file_path):
-            with open(file_path) as json_file:
-                file_pack = json.load(json_file)
-
-        return cls(**file_pack)
-
-
-@dataclass
-class RefreshingToken(OAuthToken):
-    """
-    Compositional implementation of Token that automatically refreshes
-    an underlying OAuthToken when required (credential expiration <= 1 min)
-    upon access_token attribute access.
-    """
-
-    #: credentials used for access_token refreshing
-    credentials: Optional[Credentials] = None
-
-    #: protected/property attribute enables auto writing token values to new file location via setter
-    _local_cache: Optional[str] = None
-
-    def __getattribute__(self, item):
-        """access token setter to auto-refresh if it is expiring"""
-        if item == "access_token" and self.is_expiring:
-            fresh = self.credentials.refresh_token(self.refresh_token)
-            self.update(fresh)
-            self.store_token()
-
-        return super().__getattribute__(item)
-
-    @property
-    def local_cache(self) -> Optional[str]:
-        return self._local_cache
-
-    @local_cache.setter
-    def local_cache(self, path: str):
-        """Update attribute and dump token to new path."""
-        self._local_cache = path
-        self.store_token()
-
-    @classmethod
-    def prompt_for_token(
-        cls, credentials: Credentials, open_browser: bool = False, to_file: Optional[str] = None
-    ) -> "RefreshingToken":
-        """
-        Method for CLI token creation via user inputs.
-
-        :param credentials: Client credentials
-        :param open_browser: Optional. Open browser to OAuth consent url automatically. (Default = False).
-        :param to_file: Optional. Path to store/sync json version of resulting token. (Default = None).
-        """
-
-        code = credentials.get_code()
-        url = f"{code['verification_url']}?user_code={code['user_code']}"
-        if open_browser:
-            webbrowser.open(url)
-        input(f"Go to {url}, finish the login flow and press Enter when done, Ctrl-C to abort")
-        raw_token = credentials.token_from_code(code["device_code"])
-        ref_token = cls(credentials=credentials, **raw_token)
-        ref_token.update(ref_token.as_dict())
-        if to_file:
-            ref_token.local_cache = to_file
-        return ref_token
-
-    def store_token(self, path: Optional[str] = None) -> None:
-        """
-        Write token values to json file at specified path, defaulting to self.local_cache.
-        Operation does not update instance local_cache attribute.
-        Automatically called when local_cache is set post init.
-        """
-        file_path = path if path else self.local_cache
-
-        if file_path:
-            with open(file_path, encoding="utf8", mode="w") as file:
-                json.dump(self.as_dict(), file, indent=True)
+        return self.expires_in < 60

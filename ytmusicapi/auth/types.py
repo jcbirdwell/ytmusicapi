@@ -3,9 +3,21 @@
 from enum import Enum, auto
 from typing import List
 
+from requests.structures import CaseInsensitiveDict
+
 
 class AuthType(int, Enum):
     """enum representing types of authentication supported by this library"""
+
+    @classmethod
+    def is_oauth(cls, headers: CaseInsensitiveDict) -> bool:
+        oauth_structure = {
+            "access_token",
+            "expires_at",
+            "token_type",
+            "refresh_token",
+        }
+        return all(key in headers for key in oauth_structure)
 
     UNAUTHORIZED = auto()
 

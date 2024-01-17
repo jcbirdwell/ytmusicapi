@@ -1,3 +1,3 @@
-from oauth import *
+from .oauth import *
 
-__all__ = ['RefreshingToken', 'OAuthToken', "OAuthCredentials"]
+__all__ = ['RefreshingToken', 'OAuthToken', "OAuthCredentials", "Token"]

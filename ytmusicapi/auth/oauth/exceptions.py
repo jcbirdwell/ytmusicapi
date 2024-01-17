@@ -10,3 +10,8 @@ class UnauthorizedOAuthClient(Exception):
     OAuth client lacks permissions for specified token.
     Token can only be refreshed by OAuth credentials used for its creation.
     """
+
+
+class BadToken(Exception):
+    """Invalid token arguments passed"""
+

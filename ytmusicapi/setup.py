@@ -49,11 +49,10 @@ def setup_oauth(
 
     if client_id and client_secret:
         oauth_credentials = OAuthCredentials(client_id, client_secret, session, proxies)
-
     else:
         oauth_credentials = OAuthCredentials(session=session, proxies=proxies)
 
-    return RefreshingToken.prompt_for_token(oauth_credentials, open_browser, filepath)
+    return oauth_credentials.prompt_for_token(open_browser, filepath)
 
 
 def parse_args(args):
