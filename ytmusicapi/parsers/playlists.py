@@ -95,7 +95,7 @@ def parse_playlist_items(results, menu_entries: Optional[List[List]] = None, by_
             "views": views,
         }
 
-        if by_artists:
+        if by_artists is not None:
             song["track_number"] = int(nav(data, ["index", "runs", 0, "text"])) if isAvailable else None
 
         if duration:

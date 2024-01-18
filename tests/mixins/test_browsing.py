@@ -91,11 +91,21 @@ class TestBrowsing:
         assert len(album["tracks"][0]["artists"]) == 1
         album = yt.get_album("MPREb_rqH94Zr3NN0")
         assert len(album["tracks"][0]["artists"]) == 2
-        album = yt.get_album("MPREb_TPH4WqN5pUo")  # album with tracks completely removed/missing
+
+    def test_get_album_track_numbers(self, yt):
+        # album with tracks completely removed/missing
+        album = yt.get_album("MPREb_TPH4WqN5pUo")
         assert album["tracks"][0]["track_number"] == 3
         assert album["tracks"][13]["track_number"] == 18
-        album = yt.get_album("MPREb_YuigcYm2erf")  # album with track (#8) disabled/greyed out
+
+        # album with track (#8) disabled/greyed out
+        album = yt.get_album("MPREb_YuigcYm2erf")
         assert album["tracks"][7]["track_number"] is None
+
+        # missing track numbers
+        album = yt.get_album("MPREb_fMX7dnwhv65")
+        assert "track_number" in (targ := album["tracks"][0])
+        assert targ["track_number"] == 1
 
     def test_get_album_other_versions(self, yt):
         # Eminem - Curtain Call: The Hits (Explicit Variant)
