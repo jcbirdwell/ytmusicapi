@@ -1,7 +1,7 @@
+import webbrowser
 from typing import Dict, Optional
 
 import requests
-import webbrowser
 
 from ytmusicapi.constants import (
     OAUTH_CLIENT_ID,
@@ -13,9 +13,9 @@ from ytmusicapi.constants import (
 )
 
 from .exceptions import BadOAuthClient, UnauthorizedOAuthClient
-from .models import AuthCodeDict, APITokenDict, RefreshableTokenDict, Credentials
-from .token import OAuthToken
+from .models import APITokenDict, AuthCodeDict, Credentials, RefreshableTokenDict
 from .refreshing import RefreshingToken
+from .token import OAuthToken
 
 
 class OAuthCredentials(Credentials):

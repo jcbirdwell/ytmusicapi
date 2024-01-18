@@ -4,7 +4,7 @@ from abc import ABC
 from typing import Optional
 
 from .exceptions import BadToken
-from .models import Bearer, DefaultScope, RefreshableTokenDict, APITokenDict
+from .models import APITokenDict, Bearer, DefaultScope, RefreshableTokenDict
 
 
 class Token(ABC):
@@ -62,7 +62,7 @@ class Token(ABC):
 
     @property
     def expires_in(self) -> int:
-        return self._expires_in
+        return int(self._expires_at - time.time())
 
     @property
     def is_expiring(self) -> bool:
@@ -97,12 +97,17 @@ class OAuthToken(Token):
         self._scope = scope
         self._token_type = token_type
 
-        # set/calculate token expiration using current epoch
-        if not (expires_at or expires_in):
-            raise BadToken('Token must have either expires_at or expires_in passed.')
+        # preferred set from value
+        if expires_at is not None:
+            self._expires_at = expires_at
 
-        self._expires_at: int = expires_at if expires_at else int(time.time()) + expires_in
-        self._expires_in: int = expires_in
+        # set/calculate token expiration using current epoch
+        elif expires_in is not None:
+            self._expires_at = int(time.time()) + expires_in
+
+        # gotta have one
+        else:
+            raise BadToken("Token must have either expires_at or expires_in passed.")
 
     def update(self, fresh_access: APITokenDict):
         """
@@ -112,11 +117,3 @@ class OAuthToken(Token):
         """
         self._access_token = fresh_access["access_token"]
         self._expires_at = int(time.time() + fresh_access["expires_in"])
-
-    @property
-    def expires_in(self) -> int:
-        return int(self.expires_at - time.time())
-
-    @property
-    def is_expiring(self) -> bool:
-        return self.expires_in < 60

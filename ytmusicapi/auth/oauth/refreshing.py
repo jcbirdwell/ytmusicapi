@@ -2,9 +2,9 @@ import json
 import os
 from typing import Optional
 
-from .token import Token, OAuthToken
 from .credentials import Credentials
 from .models import Bearer, RefreshableTokenDict
+from .token import OAuthToken, Token
 
 
 class RefreshingToken(Token):

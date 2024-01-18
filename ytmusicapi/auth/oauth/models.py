@@ -1,8 +1,7 @@
 """models for oauth authentication"""
 
-from typing import Literal, TypedDict, Union, Mapping
 from abc import ABC, abstractmethod
-
+from typing import Literal, Mapping, TypedDict, Union
 
 DefaultScope = Union[str, Literal["https://www.googleapis.com/auth/youtube"]]
 Bearer = Union[str, Literal["Bearer"]]
@@ -52,5 +51,5 @@ class Credentials(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def refresh_token(self, refresh_token: str) -> BaseTokenDict:
+    def refresh_token(self, refresh_token: str) -> APITokenDict:
         raise NotImplementedError()
