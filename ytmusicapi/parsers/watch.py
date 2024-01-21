@@ -40,21 +40,21 @@ def parse_watch_track(data):
     song_info = parse_song_runs(data["longBylineText"]["runs"])
 
     track = {
-        "videoId": data["videoId"],
+        "video_id": data["videoId"],
         "title": nav(data, TITLE_TEXT),
         "length": nav(data, ["lengthText", "runs", 0, "text"], True),
         "thumbnail": nav(data, THUMBNAIL),
-        "feedbackTokens": feedback_tokens,
-        "likeStatus": like_status,
-        "inLibrary": library_status,
-        "videoType": nav(data, ["navigationEndpoint"] + NAVIGATION_VIDEO_TYPE, True),
+        "feedback_tokens": feedback_tokens,
+        "like_status": like_status,
+        "in_library": library_status,
+        "video_type": nav(data, ["navigationEndpoint"] + NAVIGATION_VIDEO_TYPE, True),
     }
     track.update(song_info)
     return track
 
 
-def get_tab_browse_id(watchNextRenderer, tab_id):
-    if "unselectable" not in watchNextRenderer["tabs"][tab_id]["tabRenderer"]:
-        return watchNextRenderer["tabs"][tab_id]["tabRenderer"]["endpoint"]["browseEndpoint"]["browseId"]
+def get_tab_browse_id(next_render, tab_id):
+    if "unselectable" not in next_render["tabs"][tab_id]["tabRenderer"]:
+        return next_render["tabs"][tab_id]["tabRenderer"]["endpoint"]["browseEndpoint"]["browseId"]
     else:
         return None

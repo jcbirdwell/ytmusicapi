@@ -1,9 +1,9 @@
 import re
 
-from ._utils import *
+from .utils import *
 
 
-def parse_pl_song_artists(data, index, fill_artists=None):
+def parse_pl_song_artists(data, index, as_album=None):
     flex_item = get_flex_column_item(data, index)
     if not flex_item:
         return None
@@ -20,8 +20,8 @@ def parse_pl_song_artists(data, index, fill_artists=None):
 
         # try to fill with name and id from album artists when possible
         return [
-            next((f for f in fill_artists if f["name"] == x), {"name": x, "id": None})
-            if fill_artists
+            next((f for f in as_album["artists"] if f["name"] == x), {"name": x, "id": None})
+            if as_album
             else {"name": x, "id": None}
             for x in parsed
         ]
@@ -50,7 +50,7 @@ def parse_song_runs(runs):
     for i, run in enumerate(runs):
         if i % 2:  # uneven items are always separators
             continue
-        text = run["text"]
+
         if "navigationEndpoint" in run:  # artist or album
             item = parse_id_name(run)
 
@@ -61,32 +61,32 @@ def parse_song_runs(runs):
 
         else:
             # note: YT uses non-breaking space \xa0 to separate number and magnitude
-            if re.match(r"^\d([^ ])* [^ ]*$", text) and i > 0:
-                parsed["views"] = text.split(" ")[0]
+            if re.match(r"^\d([^ ])* [^ ]*$", run["text"]) and i > 0:
+                parsed["views"] = run["text"].split(" ")[0]
 
-            elif re.match(r"^(\d+:)*\d+:\d+$", text):
-                parsed["duration"] = text
-                parsed["duration_seconds"] = parse_duration(text)
+            elif re.match(r"^(\d+:)*\d+:\d+$", run["text"]):
+                parsed["duration_s"] = parse_duration(run["text"])
 
-            elif re.match(r"^\d{4}$", text):
-                parsed["year"] = text
+            elif re.match(r"^\d{4}$", run["text"]):
+                parsed["year"] = run["text"]
 
             else:  # artist without id
-                parsed["artists"].append({"name": text, "id": None})
+                parsed["artists"].append({"name": run["text"], "id": None})
 
     return parsed
 
 
 def parse_song_album(data, index):
     flex_item = get_flex_column_item(data, index)
-    return None if not flex_item else {"name": get_item_text(data, index), "id": get_browse_id(flex_item, 0)}
+    if not flex_item:
+        return {"id": None, "name": None}
+    else:
+        return {"name": get_item_text(data, index), "id": get_browse_id(flex_item, 0)}
 
 
 def parse_song_library_status(item) -> bool:
     """Returns True if song is in the library"""
-    library_status = nav(item, [TOGGLE_MENU, "defaultIcon", "iconType"], True)
-
-    return library_status == "LIBRARY_SAVED"
+    return nav(item, [TOGGLE_MENU, "defaultIcon", "iconType"], True) == "LIBRARY_SAVED"
 
 
 def parse_song_menu_tokens(item):
@@ -103,5 +103,7 @@ def parse_song_menu_tokens(item):
 
 
 def parse_like_status(service):
+    if service is None:
+        return None
     status = ["LIKE", "INDIFFERENT"]
     return status[status.index(service["likeEndpoint"]["status"]) - 1]

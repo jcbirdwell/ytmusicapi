@@ -9,7 +9,7 @@ class SearchMixin(MixinProtocol):
     def search(
         self,
         query: str,
-        filter: Optional[str] = None,
+        only: Optional[str] = None,
         scope: Optional[str] = None,
         limit: int = 20,
         ignore_spelling: bool = False,
@@ -19,7 +19,7 @@ class SearchMixin(MixinProtocol):
         Returns results within the provided category.
 
         :param query: Query string, i.e. 'Oasis Wonderwall'
-        :param filter: Filter for item types. Allowed values: ``songs``, ``videos``, ``albums``, ``artists``, ``playlists``, ``community_playlists``, ``featured_playlists``, ``uploads``.
+        :param only: Filter for item types. Allowed values: ``songs``, ``videos``, ``albums``, ``artists``, ``playlists``, ``community_playlists``, ``featured_playlists``, ``uploads``.
           Default: Default search, including all types of items.
         :param scope: Search scope. Allowed values: ``library``, ``uploads``.
             Default: Search the public YouTube Music catalogue.
@@ -134,7 +134,6 @@ class SearchMixin(MixinProtocol):
 
         """
         body = {"query": query}
-        endpoint = "search"
         search_results: List[Dict[str, Any]] = []
         filters = [
             "albums",
@@ -148,7 +147,7 @@ class SearchMixin(MixinProtocol):
             "podcasts",
             "episodes",
         ]
-        if filter and filter not in filters:
+        if only and only not in filters:
             raise Exception(
                 "Invalid filter provided. Please use one of the following filters or leave out the parameter: "
                 + ", ".join(filters)
@@ -161,23 +160,23 @@ class SearchMixin(MixinProtocol):
                 + ", ".join(scopes)
             )
 
-        if scope == scopes[1] and filter:
+        if scope == scopes[1] and only:
             raise Exception(
                 "No filter can be set when searching uploads. Please unset the filter parameter when scope is set to "
                 "uploads. "
             )
 
-        if scope == scopes[0] and filter in filters[3:5]:
+        if scope == scopes[0] and only in filters[3:5]:
             raise Exception(
-                f"{filter} cannot be set when searching library. "
+                f"{only} cannot be set when searching library. "
                 f"Please use one of the following filters or leave out the parameter: "
                 + ", ".join(filters[0:3] + filters[5:])
             )
 
-        params = get_search_params(filter, scope, ignore_spelling)
+        params = get_search_params(only, scope, ignore_spelling)
         if params:
             body["params"] = params
-
+        endpoint = "search"
         response = self._send_request(endpoint, body)
 
         # no results
@@ -185,7 +184,7 @@ class SearchMixin(MixinProtocol):
             return search_results
 
         if "tabbedSearchResultsRenderer" in response["contents"]:
-            tab_index = 0 if not scope or filter else scopes.index(scope) + 1
+            tab_index = 0 if not scope or only else scopes.index(scope) + 1
             results = response["contents"]["tabbedSearchResultsRenderer"]["tabs"][tab_index]["tabRenderer"][
                 "content"
             ]
@@ -199,10 +198,10 @@ class SearchMixin(MixinProtocol):
             return search_results
 
         # set filter for parser
-        if filter and "playlists" in filter:
-            filter = "playlists"
+        if only and "playlists" in only:
+            only = "playlists"
         elif scope == scopes[1]:
-            filter = scopes[1]
+            only = scopes[1]
 
         for res in results:
             if "musicCardShelfRenderer" in res:
@@ -215,32 +214,32 @@ class SearchMixin(MixinProtocol):
                     # category "more from youtube" is missing sometimes
                     if "messageRenderer" in results[0]:
                         category = nav(results.pop(0), ["messageRenderer"] + TEXT_RUN_TEXT)
-                    type = None
+                    result_type = None
                 else:
                     continue
 
             elif "musicShelfRenderer" in res:
                 results = res["musicShelfRenderer"]["contents"]
-                type_filter = filter
+                type_filter = only
                 category = nav(res, MUSIC_SHELF + TITLE_TEXT, True)
                 if not type_filter and scope == scopes[0]:
                     type_filter = category
 
-                type = type_filter[:-1].lower() if type_filter else None
+                result_type = type_filter[:-1].lower() if type_filter else None
 
             else:
                 continue
 
             search_result_types = self.parser.get_search_result_types()
-            search_results.extend(parse_search_results(results, search_result_types, type, category))
+            search_results.extend(parse_search_results(results, search_result_types, result_type, category))
 
-            if filter:  # if filter is set, there are continuations
+            if only:  # if filter is set, there are continuations
 
-                def request_func(additionalParams):
-                    return self._send_request(endpoint, body, additionalParams)
+                def request_func(additional_params):
+                    return self._send_request(endpoint, body, additional_params)
 
                 def parse_func(contents):
-                    return parse_search_results(contents, search_result_types, type, category)
+                    return parse_search_results(contents, search_result_types, result_type, category)
 
                 search_results.extend(
                     get_continuations(

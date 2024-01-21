@@ -3,6 +3,7 @@ import tempfile
 import pytest
 
 from tests.conftest import get_resource
+from ytmusicapi.exceptions import WrongAuthType
 
 
 class TestUploads:
@@ -34,13 +35,13 @@ class TestUploads:
         assert len(results) == 0
 
     def test_upload_song_exceptions(self, config, yt_auth, yt_oauth):
-        with pytest.raises(Exception, match="The provided file does not exist."):
+        with pytest.raises(FileNotFoundError, match="The provided file does not exist."):
             yt_auth.upload_song("song.wav")
         with tempfile.NamedTemporaryFile(suffix="wav") as temp, pytest.raises(
-            Exception, match="The provided file type is not supported"
+            TypeError, match="The provided file type is not supported"
         ):
             yt_auth.upload_song(temp.name)
-        with pytest.raises(Exception, match="Please provide browser authentication"):
+        with pytest.raises(WrongAuthType, match="Please provide BROWSER authentication"):
             yt_oauth.upload_song(config["uploads"]["file"])
 
     def test_upload_song(self, config, yt_auth):
@@ -50,7 +51,7 @@ class TestUploads:
     @pytest.mark.skip(reason="Do not delete uploads")
     def test_delete_upload_entity(self, yt_oauth):
         results = yt_oauth.get_library_upload_songs()
-        response = yt_oauth.delete_upload_entity(results[0]["entityId"])
+        response = yt_oauth.delete_upload_entity(results[0]["entity_id"])
         assert response == "STATUS_SUCCEEDED"
 
     def test_get_library_upload_album(self, config, yt_oauth):

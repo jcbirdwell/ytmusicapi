@@ -31,10 +31,10 @@ class TestPlaylists:
             playlist["id"],
             title="",
             description="",
-            privacyStatus="PRIVATE",
-            moveItem=(
-                playlist["tracks"][1]["setVideoId"],
-                playlist["tracks"][0]["setVideoId"],
+            privacy_status="PRIVATE",
+            move_item=(
+                playlist["tracks"][1]["set_video_id"],
+                playlist["tracks"][0]["set_video_id"],
             ),
         )
         assert response == "STATUS_SUCCEEDED", "Playlist edit failed"
@@ -42,10 +42,10 @@ class TestPlaylists:
             playlist["id"],
             title=playlist["title"],
             description=playlist["description"],
-            privacyStatus=playlist["privacy"],
-            moveItem=(
-                playlist["tracks"][0]["setVideoId"],
-                playlist["tracks"][1]["setVideoId"],
+            privacy_status=playlist["privacy"],
+            move_item=(
+                playlist["tracks"][0]["set_video_id"],
+                playlist["tracks"][1]["set_video_id"],
             ),
         )
         assert response == "STATUS_SUCCEEDED", "Playlist edit failed"
@@ -57,7 +57,7 @@ class TestPlaylists:
             source_playlist="OLAK5uy_lGQfnMNGvYCRdDq9ZLzJV2BJL2aHQsz9Y",
         )
         assert len(playlist_id) == 34, "Playlist creation failed"
-        yt_brand.edit_playlist(playlist_id, addToTop=True)
+        yt_brand.edit_playlist(playlist_id, add_to_top=True)
         response = yt_brand.add_playlist_items(
             playlist_id,
             [sample_video, sample_video],
@@ -67,7 +67,7 @@ class TestPlaylists:
         assert response["status"] == "STATUS_SUCCEEDED", "Adding playlist item failed"
         assert len(response["playlistEditResults"]) > 0, "Adding playlist item failed"
         time.sleep(3)
-        yt_brand.edit_playlist(playlist_id, addToTop=False)
+        yt_brand.edit_playlist(playlist_id, add_to_top=False)
         playlist = yt_brand.get_playlist(playlist_id, related=True)
         assert len(playlist["tracks"]) == 46, "Getting playlist items failed"
         response = yt_brand.remove_playlist_items(playlist_id, playlist["tracks"])

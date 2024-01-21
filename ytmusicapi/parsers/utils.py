@@ -1,3 +1,4 @@
+import re
 from functools import wraps
 
 from ytmusicapi.navigation import *
@@ -58,6 +59,27 @@ def get_browse_id(item, index):
         return nav(item["text"]["runs"][index], NAVIGATION_BROWSE_ID)
 
 
+def get_ext(item):
+    base = item["title"]["runs"][0]
+
+    if more := base.get("navigationEndpoint"):
+        return {
+            "text": base["text"].lower(),
+            "browse_id": more["browseEndpoint"]["browseId"],
+            "params": more["browseEndpoint"]["params"],
+            "type": get_page_type(more["browseEndpoint"]),
+        }
+    else:
+        return {"text": base["text"].lower(), "browse_id": None, "params": None, "type": None}
+
+
+def get_page_type(item):
+    if "browseEndpointContextSupportedConfigs" not in item:
+        return None
+
+    return item["browseEndpointContextSupportedConfigs"]["browseEndpointContextMusicConfig"]["pageType"]
+
+
 def get_dot_separator_index(runs):
     index = len(runs)
     try:
@@ -82,9 +104,14 @@ def parse_real_count(run):
 def parse_duration(duration):
     if duration is None:
         return duration
-    mapped_increments = zip([1, 60, 3600], reversed(duration.split(":")))
-    seconds = sum(multiplier * int(time) for multiplier, time in mapped_increments)
-    return seconds
+    if ":" in duration:
+        mapped_increments = zip([1, 60, 3600], reversed(duration.split(":")))
+        seconds = sum(multiplier * int(time) for multiplier, time in mapped_increments)
+        return seconds
+    elif "seconds" in duration or "minutes" in duration:
+        matches = re.findall(r"(?:(\d*) hour)?(?:, )?(?:(\d*) minutes)?(?:, )?(?:(\d*) seconds)?", duration)
+        hours, minutes, seconds = [int(x) if x else 0 for x in matches[0]]
+        return seconds + minutes * 60 + hours * 3600
 
 
 def i18n(method):

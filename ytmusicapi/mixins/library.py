@@ -35,7 +35,7 @@ class LibraryMixin(MixinProtocol):
         playlists = parse_content_list(results["items"][1:], parse_playlist)
 
         if "continuations" in results:
-            request_func = lambda additionalParams: self._send_request(endpoint, body, additionalParams)
+            request_func = lambda additional_params: self._send_request(endpoint, body, additional_params)
             parse_func = lambda contents: parse_content_list(contents, parse_playlist)
             remaining_limit = None if limit is None else (limit - len(playlists))
             playlists.extend(
@@ -65,7 +65,7 @@ class LibraryMixin(MixinProtocol):
         endpoint = "browse"
         per_page = 25
 
-        request_func = lambda additionalParams: self._send_request(endpoint, body)
+        request_func = lambda additional_params: self._send_request(endpoint, body)
         parse_func = lambda raw_response: parse_library_songs(raw_response)
 
         if validate_responses and limit is None:
@@ -85,8 +85,8 @@ class LibraryMixin(MixinProtocol):
             return []
 
         if "continuations" in results:
-            request_continuations_func = lambda additionalParams: self._send_request(
-                endpoint, body, additionalParams
+            request_continuations_func = lambda additional_params: self._send_request(
+                endpoint, body, additional_params
             )
             parse_continuations_func = lambda contents: parse_playlist_items(contents)
 
@@ -147,7 +147,7 @@ class LibraryMixin(MixinProtocol):
         endpoint = "browse"
         response = self._send_request(endpoint, body)
         return parse_library_albums(
-            response, lambda additionalParams: self._send_request(endpoint, body, additionalParams), limit
+            response, lambda additional_params: self._send_request(endpoint, body, additional_params), limit
         )
 
     def get_library_artists(self, limit: int = 25, order: Optional[str] = None) -> List[Dict]:
@@ -175,7 +175,7 @@ class LibraryMixin(MixinProtocol):
         endpoint = "browse"
         response = self._send_request(endpoint, body)
         return parse_library_artists(
-            response, lambda additionalParams: self._send_request(endpoint, body, additionalParams), limit
+            response, lambda additional_params: self._send_request(endpoint, body, additional_params), limit
         )
 
     def get_library_subscriptions(self, limit: int = 25, order: Optional[str] = None) -> List[Dict]:
@@ -194,7 +194,7 @@ class LibraryMixin(MixinProtocol):
         endpoint = "browse"
         response = self._send_request(endpoint, body)
         return parse_library_artists(
-            response, lambda additionalParams: self._send_request(endpoint, body, additionalParams), limit
+            response, lambda additional_params: self._send_request(endpoint, body, additional_params), limit
         )
 
     def get_history(self) -> List[Dict]:
@@ -206,9 +206,8 @@ class LibraryMixin(MixinProtocol):
           The additional property ``feedbackToken`` can be used to remove items with :py:func:`remove_history_items`
         """
         self._check_auth()
-        body = {"browseId": "FEmusic_history"}
-        endpoint = "browse"
-        response = self._send_request(endpoint, body)
+
+        response = self._send_request("browse", {"browseId": "FEmusic_history"})
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST)
         songs = []
         for content in results:
@@ -216,11 +215,12 @@ class LibraryMixin(MixinProtocol):
             if not data:
                 error = nav(content, ["musicNotifierShelfRenderer"] + TITLE, True)
                 raise Exception(error)
-            menu_entries = [[-1] + MENU_SERVICE + FEEDBACK_TOKEN]
-            songlist = parse_playlist_items(data, menu_entries)
-            for song in songlist:
-                song["played"] = nav(content["musicShelfRenderer"], TITLE_TEXT)
-            songs.extend(songlist)
+
+            song_list = parse_playlist_items(data, MENU_ENTRIES)
+            for song in song_list:
+                song["last_played"] = nav(content["musicShelfRenderer"], TITLE_TEXT)
+
+            songs.extend(song_list)
 
         return songs
 
@@ -238,25 +238,24 @@ class LibraryMixin(MixinProtocol):
         params = {"ver": 2, "c": "WEB_REMIX", "cpn": cpn}
         return self._send_get_request(url, params)
 
-    def remove_history_items(self, feedbackTokens: List[str]) -> Dict:  # pragma: no cover
+    def remove_history_items(self, feedback_tokens: List[str]) -> Dict:  # pragma: no cover
         """
         Remove an item from the account's history. This method does currently not work with brand accounts
 
-        :param feedbackTokens: Token to identify the item to remove, obtained from :py:func:`get_history`
+        :param feedback_tokens: Token to identify the item to remove, obtained from :py:func:`get_history`
         :return: Full response
         """
         self._check_auth()
-        body = {"feedbackTokens": feedbackTokens}
-        endpoint = "feedback"
-        response = self._send_request(endpoint, body)
+
+        response = self._send_request("feedback", {"feedbackTokens": feedback_tokens})
 
         return response
 
-    def rate_song(self, videoId: str, rating: str = "INDIFFERENT") -> Optional[Dict]:
+    def rate_song(self, video_id: str, rating: str = "INDIFFERENT") -> Optional[Dict]:
         """
         Rates a song ("thumbs up"/"thumbs down" interactions on YouTube Music)
 
-        :param videoId: Video id
+        :param video_id: Video id
         :param rating: One of 'LIKE', 'DISLIKE', 'INDIFFERENT'
 
           | 'INDIFFERENT' removes the previous rating and assigns no rating
@@ -264,32 +263,29 @@ class LibraryMixin(MixinProtocol):
         :return: Full response
         """
         self._check_auth()
-        body = {"target": {"videoId": videoId}}
-        endpoint = prepare_like_endpoint(rating)
-        if endpoint is None:
+        if not (endpoint := prepare_like_endpoint(rating)):
             return None
 
-        return self._send_request(endpoint, body)
+        return self._send_request(endpoint, {"target": {"videoId": video_id}})
 
-    def edit_song_library_status(self, feedbackTokens: Optional[List[str]] = None) -> Dict:
+    def edit_song_library_status(self, feedback_tokens: Optional[List[str]] = None) -> Dict:
         """
         Adds or removes a song from your library depending on the token provided.
 
-        :param feedbackTokens: List of feedbackTokens obtained from authenticated requests
+        :param feedback_tokens: List of feedbackTokens obtained from authenticated requests
             to endpoints that return songs (i.e. :py:func:`get_album`)
         :return: Full response
         """
         self._check_auth()
-        body = {"feedbackTokens": feedbackTokens}
-        endpoint = "feedback"
-        return self._send_request(endpoint, body)
 
-    def rate_playlist(self, playlistId: str, rating: str = "INDIFFERENT") -> Dict:
+        return self._send_request("feedback", {"feedbackTokens": feedback_tokens})
+
+    def rate_playlist(self, playlist_id: str, rating: str = "INDIFFERENT") -> Optional[Dict]:
         """
         Rates a playlist/album ("Add to library"/"Remove from library" interactions on YouTube Music)
         You can also dislike a playlist/album, which has an effect on your recommendations
 
-        :param playlistId: Playlist id
+        :param playlist_id: Playlist id
         :param rating: One of 'LIKE', 'DISLIKE', 'INDIFFERENT'
 
           | 'INDIFFERENT' removes the playlist/album from the library
@@ -297,30 +293,29 @@ class LibraryMixin(MixinProtocol):
         :return: Full response
         """
         self._check_auth()
-        body = {"target": {"playlistId": playlistId}}
-        endpoint = prepare_like_endpoint(rating)
-        return endpoint if not endpoint else self._send_request(endpoint, body)
+        if not (endpoint := prepare_like_endpoint(rating)):
+            return None
 
-    def subscribe_artists(self, channelIds: List[str]) -> Dict:
+        return self._send_request(endpoint, {"target": {"playlistId": playlist_id}})
+
+    def subscribe_artists(self, channel_ids: List[str]) -> Dict:
         """
         Subscribe to artists. Adds the artists to your library
 
-        :param channelIds: Artist channel ids
+        :param channel_ids: Artist channel ids
         :return: Full response
         """
         self._check_auth()
-        body = {"channelIds": channelIds}
-        endpoint = "subscription/subscribe"
-        return self._send_request(endpoint, body)
 
-    def unsubscribe_artists(self, channelIds: List[str]) -> Dict:
+        return self._send_request("subscription/subscribe", {"channelIds": channel_ids})
+
+    def unsubscribe_artists(self, channel_ids: List[str]) -> Dict:
         """
         Unsubscribe from artists. Removes the artists from your library
 
-        :param channelIds: Artist channel ids
+        :param channel_ids: Artist channel ids
         :return: Full response
         """
         self._check_auth()
-        body = {"channelIds": channelIds}
-        endpoint = "subscription/unsubscribe"
-        return self._send_request(endpoint, body)
+
+        return self._send_request("subscription/unsubscribe", {"channelIds": channel_ids})

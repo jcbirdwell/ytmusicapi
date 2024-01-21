@@ -6,12 +6,12 @@ def get_continuations(
 ):
     items = []
     while "continuations" in results and (limit is None or len(items) < limit):
-        additionalParams = (
+        additional_params = (
             get_reloadable_continuation_params(results)
             if reloadable
             else get_continuation_params(results, ctoken_path)
         )
-        response = request_func(additionalParams)
+        response = request_func(additional_params)
         if "continuationContents" in response:
             results = response["continuationContents"][continuation_type]
         else:
@@ -29,14 +29,14 @@ def get_validated_continuations(
 ):
     items = []
     while "continuations" in results and len(items) < limit:
-        additionalParams = get_continuation_params(results, ctoken_path)
+        additional_params = get_continuation_params(results, ctoken_path)
         wrapped_parse_func = lambda raw_response: get_parsed_continuation_items(
             raw_response, parse_func, continuation_type
         )
         validate_func = lambda parsed: validate_response(parsed, per_page, limit, len(items))
 
         response = resend_request_until_parsed_response_is_valid(
-            request_func, additionalParams, wrapped_parse_func, validate_func, 3
+            request_func, additional_params, wrapped_parse_func, validate_func, 3
         )
         results = response["results"]
         items.extend(response["parsed"])

@@ -12,7 +12,7 @@ from ytmusicapi.parsers.library import parse_albums
 from ytmusicapi.parsers.playlists import parse_playlist_items
 
 from ..navigation import *
-from ..parsers._utils import parse_real_count  # protected ?
+from ..parsers.utils import get_ext, parse_real_count  # protected ?
 from ._protocol import MixinProtocol
 from ._utils import get_datestamp
 
@@ -113,7 +113,7 @@ class BrowsingMixin(MixinProtocol):
 
         section_list = nav(response, SINGLE_COLUMN_TAB + ["sectionListRenderer"])
         if "continuations" in section_list:
-            request_func = lambda additionalParams: self._send_request(endpoint, body, additionalParams)
+            request_func = lambda additional_params: self._send_request(endpoint, body, additional_params)
 
             parse_func = lambda contents: parse_mixed_content(contents)
 
@@ -125,7 +125,7 @@ class BrowsingMixin(MixinProtocol):
 
         return home
 
-    def get_artist(self, channelId: str) -> Dict:
+    def get_artist(self, channel_id: str) -> Dict:
         """
         Get information about an artist and their top releases (songs,
         albums, singles, videos, and related artists). The top lists
@@ -134,7 +134,7 @@ class BrowsingMixin(MixinProtocol):
         For songs/videos, pass the browseId to :py:func:`get_playlist`.
         For albums/singles, pass browseId and params to :py:func:`get_artist_albums`.
 
-        :param channelId: channel id of the artist
+        :param channel_id: channel id of the artist
         :return: Dictionary with requested information.
 
         .. warning::
@@ -217,70 +217,67 @@ class BrowsingMixin(MixinProtocol):
                 }
             }
         """
-        if channelId.startswith("MPLA"):
-            channelId = channelId[4:]
-        body = {"browseId": channelId}
-        endpoint = "browse"
-        response = self._send_request(endpoint, body)
+        response = self._send_request("browse", {"browseId": channel_id.lstrip("MPLA")})
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST)
 
-        artist: Dict[str, Any] = {"description": None, "views": None}
+        artist: Dict[str, Any] = {"description": None}
         header = response["header"]["musicImmersiveHeaderRenderer"]
         artist["name"] = nav(header, TITLE_TEXT)
-        descriptionShelf = find_object_by_key(results, DESCRIPTION_SHELF[0], is_key=True)
-        if descriptionShelf:
-            artist["description"] = nav(descriptionShelf, DESCRIPTION)
-            artist["views"] = (
-                None
-                if "subheader" not in descriptionShelf
-                else descriptionShelf["subheader"]["runs"][0]["text"]
-            )
-            artist["view_count"] = parse_real_count(nav(descriptionShelf, ["subheader", "runs", 0], True))
+        if description_shelf := find_object_by_key(results, DESCRIPTION_SHELF[0], is_key=True):
+            artist["description"] = nav(description_shelf, DESCRIPTION)
+            artist["view_count"] = parse_real_count(nav(description_shelf, ["subheader", "runs", 0], True))
         subscription_button = header["subscriptionButton"]["subscribeButtonRenderer"]
-        artist["channelId"] = subscription_button["channelId"]
-        artist["shuffleId"] = nav(
-            header, ["playButton", "buttonRenderer"] + NAVIGATION_WATCH_PLAYLIST_ID, True
-        )
-        artist["radioId"] = nav(
-            header, ["startRadioButton", "buttonRenderer"] + NAVIGATION_WATCH_PLAYLIST_ID, True
-        )
-        artist["subscribers"] = nav(subscription_button, ["subscriberCountText", "runs", 0, "text"], True)
+        artist["channel_id"] = subscription_button["channelId"]
+        if artist["channel_id"] != channel_id:
+            artist["artist_id"] = channel_id
+
+        # artist channels accessed via their artist_id has a different layout
+        if "watchPlaylistEndpoint" in (
+            nav_fork := header["playButton"]["buttonRenderer"]["navigationEndpoint"]
+        ):
+            artist["shuffle_id"] = nav_fork["watchPlaylistEndpoint"]["playlistId"]
+            artist["page_type"] = "channel"
+        else:
+            artist["shuffle_id"] = nav_fork["watchEndpoint"]["playlistId"]
+            artist["page_type"] = "artist"
+            song_shelf = results[0]["musicShelfRenderer"]
+            artist["songs"] = {
+                "ext": get_ext(song_shelf),
+                "items": parse_playlist_items(song_shelf["contents"]),
+            }
+
+        artist["radio_id"] = artist["shuffle_id"].replace("RDAO", "RDEM")
         artist["sub_count"] = parse_real_count(
             nav(subscription_button, ["subscriberCountText", "runs", 0], True)
         )
+
         artist["subscribed"] = subscription_button["subscribed"]
         artist["thumbnails"] = nav(header, THUMBNAILS, True)
-        artist["songs"] = {"browseId": None}
-        if "musicShelfRenderer" in results[0]:  # API sometimes does not return songs
-            musicShelf = nav(results[0], MUSIC_SHELF)
-            if "navigationEndpoint" in nav(musicShelf, TITLE):
-                artist["songs"]["browseId"] = nav(musicShelf, TITLE + NAVIGATION_BROWSE_ID)
-            artist["songs"]["results"] = parse_playlist_items(musicShelf["contents"])
 
-        artist.update(self.parser.parse_artist_contents(results))
+        artist = self.parser.append_channel_contents(artist, results)
         return artist
 
     def get_artist_albums(
-        self, channelId: str, params: str, limit: Optional[int] = 100, order: Optional[str] = None
+        self, ext: Dict, limit: Optional[int] = 100, order: Optional[str] = None
     ) -> List[Dict]:
         """
         Get the full list of an artist's albums or singles
 
-        :param channelId: browseId of the artist as returned by :py:func:`get_artist`
-        :param params: params obtained by :py:func:`get_artist`
+        :param ext: dictionary containing browse_id and params by :py:func:`get_artist`
         :param limit: Number of albums to return. `None` retrieves them all. Default: 100
         :param order: Order of albums to return. Allowed values: 'Recency', 'Popularity', 'Alphabetical order'. Default: Default order.
         :return: List of albums in the format of :py:func:`get_library_albums`,
           except artists key is missing.
 
         """
-        body = {"browseId": channelId, "params": params}
+        extension = {"browseId": ext["browse_id"], "params": ext["params"]}
         endpoint = "browse"
-        response = self._send_request(endpoint, body)
+        response = self._send_request(endpoint, extension)
 
-        request_func = lambda additionalParams: self._send_request(endpoint, body, additionalParams)
+        request_func = lambda additionalParams: self._send_request(endpoint, extension, additionalParams)
         parse_func = lambda contents: parse_albums(contents)
 
+        # todo: change to a mapping
         if order:
             # pick the correct continuation from response depending on the order chosen
             sort_options = nav(
@@ -317,10 +314,10 @@ class BrowsingMixin(MixinProtocol):
             )
             # if a valid order was provided, request continuation and replace original response
             if continuation:
-                additionalParams = get_reloadable_continuation_params(
+                additional_params = get_reloadable_continuation_params(
                     {"continuations": [continuation["continuation"]]}
                 )
-                response = request_func(additionalParams)
+                response = request_func(additional_params)
                 results = nav(response, SECTION_LIST_CONTINUATION + CONTENT)
             else:
                 raise ValueError(f"Invalid order parameter {order}")
@@ -341,11 +338,11 @@ class BrowsingMixin(MixinProtocol):
 
         return albums
 
-    def get_user(self, channelId: str) -> Dict:
+    def get_user(self, channel_id: str) -> Dict:
         """
         Retrieve a user's page. A user may own videos or playlists.
 
-        :param channelId: channelId of the user
+        :param channel_id: channelId of the user
         :return: Dictionary with information about a user.
 
         Example::
@@ -389,27 +386,26 @@ class BrowsingMixin(MixinProtocol):
               }
             }
         """
-        endpoint = "browse"
-        body = {"browseId": channelId}
-        response = self._send_request(endpoint, body)
-        user = {"name": nav(response, ["header", "musicVisualHeaderRenderer"] + TITLE_TEXT)}
+
+        response = self._send_request("browse", {"browseId": channel_id})
+        user = {
+            "name": nav(response, ["header", "musicVisualHeaderRenderer"] + TITLE_TEXT),
+            "page_type": "user",
+        }
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST)
-        user.update(self.parser.parse_artist_contents(results))
+        user = self.parser.append_channel_contents(user, results)
         return user
 
-    def get_user_playlists(self, channelId: str, params: str) -> List[Dict]:
+    def get_user_playlists(self, ext: Dict) -> List[Dict]:
         """
         Retrieve a list of playlists for a given user.
         Call this function again with the returned ``params`` to get the full list.
 
-        :param channelId: channelId of the user.
-        :param params: params obtained by :py:func:`get_artist`
+        :param ext: extension dict from get_user -> playlists
         :return: List of user playlists in the format of :py:func:`get_library_playlists`
 
         """
-        endpoint = "browse"
-        body = {"browseId": channelId, "params": params}
-        response = self._send_request(endpoint, body)
+        response = self._send_request("browse", {"browseId": ext["browse_id"], "params": ext["params"]})
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM + GRID_ITEMS, True)
         if not results:
             return []
@@ -418,14 +414,14 @@ class BrowsingMixin(MixinProtocol):
 
         return user_playlists
 
-    def get_album_browse_id(self, audioPlaylistId: str) -> Optional[str]:
+    def get_album_browse_id(self, playlist_id: str) -> Optional[str]:
         """
         Get an album's browseId based on its audioPlaylistId
 
-        :param audioPlaylistId: id of the audio playlist  (starting with `OLAK5uy_`)
+        :param playlist_id: id of the audio playlist  (starting with `OLAK5uy_`)
         :return: browseId (starting with `MPREb_`)
         """
-        params = {"list": audioPlaylistId}
+        params = {"list": playlist_id}
         response = self._send_get_request(YTM_DOMAIN + "/playlist", params)
 
         matches = re.search(r"\"MPRE.+?\"", response.text.encode("utf8").decode("unicode_escape"))
@@ -434,11 +430,11 @@ class BrowsingMixin(MixinProtocol):
             browse_id = matches.group().strip('"')
         return browse_id
 
-    def get_album(self, browseId: str) -> Dict:
+    def get_album(self, browse_id: str) -> Dict:
         """
         Get information and tracks of an album
 
-        :param browseId: browseId of the album, for example
+        :param browse_id: browseId of the album, for example
             returned by :py:func:`search`
         :return: Dictionary with album and track metadata.
 
@@ -494,28 +490,25 @@ class BrowsingMixin(MixinProtocol):
               "duration_seconds": 4657
             }
         """
-        body = {"browseId": browseId}
-        endpoint = "browse"
-        response = self._send_request(endpoint, body)
+
+        response = self._send_request("browse", {"browseId": browse_id})
         album = parse_album_header(response)
+        album["browse_id"] = browse_id
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM + MUSIC_SHELF)
-        album["tracks"] = parse_playlist_items(results["contents"], by_artists=album["artists"])
+        album["tracks"] = parse_playlist_items(results["contents"], as_album=album)
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST + [1] + CAROUSEL, True)
         if results is not None:
             album["other_versions"] = parse_content_list(results["contents"], parse_album)
-        album["duration_seconds"] = sum_total_duration(album)
-        for i, track in enumerate(album["tracks"]):
-            album["tracks"][i]["album"] = album["title"]
-            album["tracks"][i]["artists"] = album["tracks"][i]["artists"] or album["artists"]
+        album["duration_s"] = sum_total_duration(album)
 
         return album
 
-    def get_song(self, videoId: str, signatureTimestamp: Optional[int] = None) -> Dict:
+    def get_song(self, video_id: str, signature_timestamp: Optional[int] = None) -> Dict:
         """
         Returns metadata and streaming information about a song or video.
 
-        :param videoId: Video id
-        :param signatureTimestamp: Provide the current YouTube signatureTimestamp.
+        :param video_id: Video id
+        :param signature_timestamp: Provide the current YouTube signatureTimestamp.
             If not provided a default value will be used, which might result in invalid streaming URLs
         :return: Dictionary with song metadata.
 
@@ -681,27 +674,26 @@ class BrowsingMixin(MixinProtocol):
             }
 
         """
-        endpoint = "player"
-        if not signatureTimestamp:
-            signatureTimestamp = get_datestamp() - 1
+        if not signature_timestamp:
+            signature_timestamp = get_datestamp() - 1
 
         params = {
-            "playbackContext": {"contentPlaybackContext": {"signatureTimestamp": signatureTimestamp}},
-            "video_id": videoId,
+            "playbackContext": {"contentPlaybackContext": {"signatureTimestamp": signature_timestamp}},
+            "video_id": video_id,
         }
-        response = self._send_request(endpoint, params)
+        response = self._send_request("player", params)
         keys = ["videoDetails", "playabilityStatus", "streamingData", "microformat", "playbackTracking"]
         for k in list(response.keys()):
             if k not in keys:
                 del response[k]
         return response
 
-    def get_song_related(self, browseId: str):
+    def get_song_related(self, browse_id: str):
         """
         Gets related content for a song. Equivalent to the content
         shown in the "Related" tab of the watch panel.
 
-        :param browseId: The `related` key  in the `get_watch_playlist` response.
+        :param browse_id: The `related` key  in the `get_watch_playlist` response.
 
         Example::
 
@@ -770,18 +762,18 @@ class BrowsingMixin(MixinProtocol):
               }
             ]
         """
-        if not browseId:
+        if not browse_id:
             raise Exception("Invalid browseId provided.")
 
-        response = self._send_request("browse", {"browseId": browseId})
+        response = self._send_request("browse", {"browseId": browse_id})
         sections = nav(response, ["contents"] + SECTION_LIST)
         return parse_mixed_content(sections)
 
-    def get_lyrics(self, browseId: str) -> Dict:
+    def get_lyrics(self, browse_id: str) -> Dict:
         """
         Returns lyrics of a song or video.
 
-        :param browseId: Lyrics browse id obtained from `get_watch_playlist`
+        :param browse_id: Lyrics browse id obtained from `get_watch_playlist`
         :return: Dictionary with song lyrics.
 
         Example::
@@ -793,10 +785,10 @@ class BrowsingMixin(MixinProtocol):
 
         """
         lyrics = {}
-        if not browseId:
+        if not browse_id:
             raise Exception("Invalid browseId provided. This song might not have lyrics.")
 
-        response = self._send_request("browse", {"browseId": browseId})
+        response = self._send_request("browse", {"browseId": browse_id})
         lyrics["lyrics"] = nav(
             response, ["contents"] + SECTION_LIST_ITEM + DESCRIPTION_SHELF + DESCRIPTION, True
         )
@@ -819,7 +811,7 @@ class BrowsingMixin(MixinProtocol):
 
         return YTM_DOMAIN + match.group(1)
 
-    def get_signatureTimestamp(self, url: Optional[str] = None) -> int:
+    def get_signature_timestamp(self, url: Optional[str] = None) -> int:
         """
         Fetch the `base.js` script from YouTube Music and parse out the
         `signatureTimestamp` for use with :py:func:`get_song`.
@@ -837,7 +829,7 @@ class BrowsingMixin(MixinProtocol):
 
         return int(match.group(1))
 
-    def get_tasteprofile(self) -> Dict:
+    def get_taste_profile(self) -> Dict:
         """
         Fetches suggested artists from taste profile (music.youtube.com/tasteprofile).
         Tasteprofile allows users to pick artists to update their recommendations.
@@ -869,7 +861,7 @@ class BrowsingMixin(MixinProtocol):
                 }
         return taste_profiles
 
-    def set_tasteprofile(self, artists: List[str], taste_profile: Optional[Dict] = None) -> None:
+    def set_taste_profile(self, artists: List[str], taste_profile: Optional[Dict] = None) -> None:
         """
         Favorites artists to see more recommendations from the artist.
         Use :py:func:`get_tasteprofile` to see which artists are available to be recommended
@@ -881,8 +873,8 @@ class BrowsingMixin(MixinProtocol):
         """
 
         if taste_profile is None:
-            taste_profile = self.get_tasteprofile()
-        formData = {
+            taste_profile = self.get_taste_profile()
+        form_data = {
             "impressionValues": [taste_profile[profile]["impressionValue"] for profile in taste_profile],
             "selectedValues": [],
         }
@@ -890,7 +882,6 @@ class BrowsingMixin(MixinProtocol):
         for artist in artists:
             if artist not in taste_profile:
                 raise Exception("The artist, {}, was not present in taste!".format(artist))
-            formData["selectedValues"].append(taste_profile[artist]["selectionValue"])
+            form_data["selectedValues"].append(taste_profile[artist]["selectionValue"])
 
-        body = {"browseId": "FEmusic_home", "formData": formData}
-        self._send_request("browse", body)
+        self._send_request("browse", {"browseId": "FEmusic_home", "formData": form_data})

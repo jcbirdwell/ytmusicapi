@@ -1,5 +1,5 @@
-from ._utils import *
 from .songs import *
+from .utils import *
 
 
 def parse_mixed_content(rows):
@@ -54,10 +54,10 @@ def parse_content_list(results, parse_func, key=MTRIR):
 def parse_album(result):
     album = {
         "title": nav(result, TITLE_TEXT),
-        "browseId": nav(result, TITLE + NAVIGATION_BROWSE_ID),
-        "audioPlaylistId": nav(result, THUMBNAIL_OVERLAY, True),
+        "browse_id": nav(result, TITLE + NAVIGATION_BROWSE_ID),
+        "playlist_id": nav(result, THUMBNAIL_OVERLAY, True),
         "thumbnails": nav(result, THUMBNAIL_RENDERER),
-        "isExplicit": nav(result, SUBTITLE_BADGE_LABEL, True) is not None,
+        "explicit": nav(result, SUBTITLE_BADGE_LABEL, True) is not None,
     }
 
     runs = nav(result, SUBTITLE_RUNS)
@@ -81,8 +81,8 @@ def parse_album(result):
 def parse_song(result):
     song = {
         "title": nav(result, TITLE_TEXT),
-        "videoId": nav(result, NAVIGATION_VIDEO_ID),
-        "playlistId": nav(result, NAVIGATION_PLAYLIST_ID, True),
+        "video_id": nav(result, NAVIGATION_VIDEO_ID),
+        "playlist_id": nav(result, NAVIGATION_PLAYLIST_ID, True),
         "thumbnails": nav(result, THUMBNAIL_RENDERER),
     }
     song.update(parse_song_runs(nav(result, SUBTITLE_RUNS)))
@@ -93,10 +93,10 @@ def parse_song_flat(data):
     columns = [get_flex_column_item(data, i) for i in range(0, len(data["flexColumns"]))]
     song = {
         "title": nav(columns[0], TEXT_RUN_TEXT),
-        "videoId": nav(columns[0], TEXT_RUN + NAVIGATION_VIDEO_ID, True),
+        "video_id": nav(columns[0], TEXT_RUN + NAVIGATION_VIDEO_ID, True),
         "artists": parse_pl_song_artists(data, 1),
         "thumbnails": nav(data, THUMBNAILS),
-        "isExplicit": nav(data, BADGE_LABEL, True) is not None,
+        "explicit": nav(data, BADGE_LABEL, True) is not None,
     }
     if (
         len(columns) > 2
@@ -113,10 +113,10 @@ def parse_song_flat(data):
 def parse_video(result):
     runs = nav(result, SUBTITLE_RUNS)
     # artists_len = get_dot_separator_index(runs)
-    videoId = nav(result, NAVIGATION_VIDEO_ID, True)
-    if not videoId:
+    video_id = nav(result, NAVIGATION_VIDEO_ID, True)
+    if not video_id:
         # I believe this
-        videoId = next(
+        video_id = next(
             (
                 found
                 for entry in nav(result, MENU_ITEMS)
@@ -126,8 +126,8 @@ def parse_video(result):
         )  # this won't match anything for episodes, None to catch iterator
     result = {
         "title": nav(result, TITLE_TEXT),
-        "videoId": videoId,
-        "playlistId": nav(result, NAVIGATION_PLAYLIST_ID, True),
+        "video_id": video_id,
+        "playlist_id": nav(result, NAVIGATION_PLAYLIST_ID, True),
         "thumbnails": nav(result, THUMBNAIL_RENDERER, True),
     }
 
@@ -151,8 +151,8 @@ def parse_video(result):
 
 def parse_playlist(data):
     playlist = {
-        "title": nav(data, TITLE_TEXT),
-        "playlistId": nav(data, TITLE + NAVIGATION_BROWSE_ID)[2:],
+        "name": nav(data, TITLE_TEXT),
+        "playlist_id": nav(data, TITLE + NAVIGATION_BROWSE_ID)[2:],
         "thumbnails": nav(data, THUMBNAIL_RENDERER),
     }
     runs = nav(data, SUBTITLE_RUNS)
@@ -161,12 +161,10 @@ def parse_playlist(data):
         if len(runs) == 3 and runs[1]["text"] == " • ":
             # genre charts from get_charts('US') are sent here...
             if runs[0]["text"] == "Chart" or runs[-1]["text"] == "YouTube Music":
-                playlist["count"] = None
                 playlist["view_count"] = -1
                 playlist["author"] = {"name": "YouTube Music", "id": None}
                 playlist["featured_artists"] = None
             else:
-                playlist["count"] = nav(data, SUBTITLE2).split(" ")[0]  # this is "views" everywhere else
                 playlist["view_count"] = parse_real_count(runs[2])
                 playlist["author"] = parse_id_name(runs[0])
                 playlist["featured_artists"] = None
@@ -180,13 +178,9 @@ def parse_playlist(data):
 
 
 def parse_related_artist(data):
-    subscribers = nav(data, SUBTITLE, True)
-    if subscribers:
-        subscribers = subscribers.split(" ")[0]
     return {
-        "title": nav(data, TITLE_TEXT),
-        "browseId": nav(data, TITLE + NAVIGATION_BROWSE_ID),
-        "subscribers": subscribers,
+        "name": nav(data, TITLE_TEXT),
+        "browse_id": nav(data, TITLE + NAVIGATION_BROWSE_ID),
         "sub_count": parse_real_count(nav(data, LAST_SUB_RUN, True)),
         "thumbnails": nav(data, THUMBNAIL_RENDERER),
     }
@@ -194,7 +188,7 @@ def parse_related_artist(data):
 
 def parse_watch_playlist(data):
     return {
-        "title": nav(data, TITLE_TEXT),
-        "playlistId": nav(data, NAVIGATION_WATCH_PLAYLIST_ID),
+        "name": nav(data, TITLE_TEXT),
+        "playlist_id": nav(data, NAVIGATION_WATCH_PLAYLIST_ID),
         "thumbnails": nav(data, THUMBNAIL_RENDERER),
     }

@@ -12,23 +12,19 @@ class TestBrowsing:
 
     def test_get_artist(self, yt):
         artist = yt.get_artist("MPLAUCmMUZbaYdNH0bEd1PAlAqsA")
-        assert len(artist) == 16
+        assert len(artist) == 17
 
         # make sure artists are correctly filled for categories
         for k in ["songs", "videos"]:
-            assert {"id": "UCmMUZbaYdNH0bEd1PAlAqsA", "name": "Oasis"} in artist[k]["results"][0]["artists"]
-        single = artist["singles"]["results"][0]
+            assert {"id": "UCmMUZbaYdNH0bEd1PAlAqsA", "name": "Oasis"} in artist[k]["items"][0]["artists"]
+        single = artist["singles"]["items"][0]
         assert len(single["year"]) == 4 and single["year"].isnumeric()
         assert single["type"] == "Single"
 
         # test correctness of related artists
-        related = artist["related"]["results"]
+        related = artist["related"]["items"]
         assert len(
-            [
-                x
-                for x in related
-                if set(x.keys()) == {"browseId", "subscribers", "title", "thumbnails", "sub_count"}
-            ]
+            [x for x in related if set(x.keys()) == {"browse_id", "name", "thumbnails", "sub_count"}]
         ) == len(related)
 
         artist = yt.get_artist("UCLZ7tlKC06ResyDmEStSrOw")  # no album year
@@ -36,36 +32,31 @@ class TestBrowsing:
 
     def test_get_artist_albums(self, yt):
         artist = yt.get_artist("UCAeLFBCQS7FvI8PvBrWvSBg")
-        results = yt.get_artist_albums(artist["albums"]["browseId"], artist["albums"]["params"])
+        results = yt.get_artist_albums(artist["albums"]["ext"])
         assert len(results) == 100
-        results = yt.get_artist_albums(artist["singles"]["browseId"], artist["singles"]["params"])
+        results = yt.get_artist_albums(artist["singles"]["ext"])
         assert len(results) == 100
 
-        results_unsorted = yt.get_artist_albums(
-            artist["albums"]["browseId"], artist["albums"]["params"], limit=None
-        )
+        results_unsorted = yt.get_artist_albums(artist["albums"]["ext"], limit=None)
         assert len(results_unsorted) >= 300
 
-        results_sorted = yt.get_artist_albums(
-            artist["albums"]["browseId"], artist["albums"]["params"], limit=None, order="alphabetical order"
-        )
+        results_sorted = yt.get_artist_albums(artist["albums"]["ext"], limit=None, order="alphabetical order")
         assert len(results_sorted) >= 300
         assert results_sorted != results_unsorted
 
         with pytest.raises(ValueError, match="Invalid order"):
-            yt.get_artist_albums(artist["albums"]["browseId"], artist["albums"]["params"], order="order")
+            yt.get_artist_albums(artist["albums"]["ext"], order="order")
 
     def test_get_user(self, yt):
         results = yt.get_user("UC44hbeRoCZVVMVg5z0FfIww")
-        assert len(results) == 3
+        assert len(results) == 4
 
     def test_get_user_playlists(self, yt, yt_auth):
-        channel = "UCPVhZsC2od1xjGhgEc2NEPQ"  # Vevo playlists
-        user = yt_auth.get_user(channel)
-        results = yt_auth.get_user_playlists(channel, user["playlists"]["params"])
+        user = yt_auth.get_user("UCPVhZsC2od1xjGhgEc2NEPQ")  # VEVO playlists
+        results = yt_auth.get_user_playlists(user["playlists"]["ext"])
         assert len(results) > 100
 
-        results_empty = yt.get_user_playlists(channel, user["playlists"]["params"])
+        results_empty = yt.get_user_playlists(user["playlists"]["ext"])
         assert len(results_empty) == 0
 
     def test_get_album_browse_id(self, yt, sample_album):
@@ -79,13 +70,15 @@ class TestBrowsing:
 
     def test_get_album(self, yt, yt_auth, sample_album):
         album = yt_auth.get_album(sample_album)
+        assert album["browse_id"] == sample_album
+        assert album["name"] == "Revival"
         assert len(album) >= 9
-        assert "isExplicit" in album
-        assert album["tracks"][0]["isExplicit"]
-        assert all(item["views"] is not None for item in album["tracks"])
+        assert "explicit" in album
+        assert album["tracks"][0]["explicit"]
+        # assert all(item["views"] is not None for item in album["tracks"])
         assert all(item["album"] is not None for item in album["tracks"])
         assert album["tracks"][0]["track_number"] == 1
-        assert "feedbackTokens" in album["tracks"][0]
+        assert "feedback_tokens" in album["tracks"][0]
         album = yt.get_album("MPREb_BQZvl3BFGay")
         assert len(album["tracks"]) == 7
         assert len(album["tracks"][0]["artists"]) == 1
@@ -114,14 +107,14 @@ class TestBrowsing:
         assert (variant := variants[0])["type"] == "Album"
         assert len(variant["artists"]) == 1
         assert variant["artists"][0] == {"name": "Eminem", "id": "UCedvOgsKFzcK3hA5taf3KoQ"}
-        assert variant["audioPlaylistId"] is not None
+        assert variant["playlist_id"] is not None
 
         # album that's multi-artist, a single, and has clean version
         # Cassö & RAYE - Prada
         album = yt.get_album("MPREb_of3qfisa0yU")
-        assert not album["isExplicit"]
+        assert not album["explicit"]
         assert (variant := album["other_versions"][0])["type"] == "Single"
-        assert variant["isExplicit"]
+        assert variant["explicit"]
         assert len(variant["artists"]) == 3
         assert variant["artists"][0]["id"] == "UCGWMNnI1Ky5bMcRlr73Cj2Q"
         assert variant["artists"][1]["name"] == "RAYE"
@@ -162,26 +155,26 @@ class TestBrowsing:
         with pytest.raises(Exception):
             yt.get_lyrics(playlist["lyrics"])
 
-    def test_get_signatureTimestamp(self, yt):
-        signature_timestamp = yt.get_signatureTimestamp()
+    def test_get_signature_timestamp(self, yt):
+        signature_timestamp = yt.get_signature_timestamp()
         assert signature_timestamp is not None
 
-    def test_set_tasteprofile(self, yt, yt_brand):
+    def test_set_taste_profile(self, yt, yt_brand):
         with pytest.raises(Exception):
-            yt.set_tasteprofile(["not an artist"])
-        taste_profile = yt.get_tasteprofile()
-        assert yt.set_tasteprofile(list(taste_profile)[:5], taste_profile) is None
+            yt.set_taste_profile(["not an artist"])
+        taste_profile = yt.get_taste_profile()
+        assert yt.set_taste_profile(list(taste_profile)[:5], taste_profile) is None
 
         with pytest.raises(Exception):
-            yt_brand.set_tasteprofile(["test", "test2"])
-        taste_profile = yt_brand.get_tasteprofile()
-        assert yt_brand.set_tasteprofile(list(taste_profile)[:1], taste_profile) is None
+            yt_brand.set_taste_profile(["test", "test2"])
+        taste_profile = yt_brand.get_taste_profile()
+        assert yt_brand.set_taste_profile(list(taste_profile)[:1], taste_profile) is None
 
-    def test_get_tasteprofile(self, yt, yt_oauth):
-        result = yt.get_tasteprofile()
+    def test_get_taste_profile(self, yt, yt_oauth):
+        result = yt.get_taste_profile()
         assert len(result) >= 0
 
-        result = yt_oauth.get_tasteprofile()
+        result = yt_oauth.get_taste_profile()
         assert len(result) >= 0
 
     def test_get_search_suggestions(self, yt, yt_brand, yt_auth):

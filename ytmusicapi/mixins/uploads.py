@@ -59,7 +59,7 @@ class UploadsMixin(MixinProtocol):
         songs = parse_uploaded_items(results["contents"])
 
         if "continuations" in results:
-            request_func = lambda additionalParams: self._send_request(endpoint, body, additionalParams)
+            request_func = lambda additional_params: self._send_request(endpoint, body, additional_params)
             remaining_limit = None if limit is None else (limit - len(songs))
             songs.extend(
                 get_continuations(
@@ -85,7 +85,7 @@ class UploadsMixin(MixinProtocol):
         endpoint = "browse"
         response = self._send_request(endpoint, body)
         return parse_library_albums(
-            response, lambda additionalParams: self._send_request(endpoint, body, additionalParams), limit
+            response, lambda additional_params: self._send_request(endpoint, body, additional_params), limit
         )
 
     def get_library_upload_artists(self, limit: int = 25, order: Optional[str] = None) -> List[Dict]:
@@ -104,14 +104,14 @@ class UploadsMixin(MixinProtocol):
         endpoint = "browse"
         response = self._send_request(endpoint, body)
         return parse_library_artists(
-            response, lambda additionalParams: self._send_request(endpoint, body, additionalParams), limit
+            response, lambda additional_params: self._send_request(endpoint, body, additional_params), limit
         )
 
-    def get_library_upload_artist(self, browseId: str, limit: int = 25) -> List[Dict]:
+    def get_library_upload_artist(self, browse_id: str, limit: int = 25) -> List[Dict]:
         """
         Returns a list of uploaded tracks for the artist.
 
-        :param browseId: Browse id of the upload artist, i.e. from :py:func:`get_library_upload_songs`
+        :param browse_id: Browse id of the upload artist, i.e. from :py:func:`get_library_upload_songs`
         :param limit: Number of songs to return (increments of 25).
         :return: List of uploaded songs.
 
@@ -135,7 +135,7 @@ class UploadsMixin(MixinProtocol):
             ]
         """
         self._check_auth()
-        body = {"browseId": browseId}
+        body = {"browseId": browse_id}
         endpoint = "browse"
         response = self._send_request(endpoint, body)
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM + MUSIC_SHELF)
@@ -145,7 +145,7 @@ class UploadsMixin(MixinProtocol):
         items = parse_uploaded_items(results["contents"])
 
         if "continuations" in results:
-            request_func = lambda additionalParams: self._send_request(endpoint, body, additionalParams)
+            request_func = lambda additional_params: self._send_request(endpoint, body, additional_params)
             parse_func = lambda contents: parse_uploaded_items(contents)
             remaining_limit = None if limit is None else (limit - len(items))
             items.extend(
@@ -156,11 +156,11 @@ class UploadsMixin(MixinProtocol):
 
         return items
 
-    def get_library_upload_album(self, browseId: str) -> Dict:
+    def get_library_upload_album(self, browse_id: str) -> Dict:
         """
         Get information and tracks of an album associated with uploaded tracks
 
-        :param browseId: Browse id of the upload album, i.e. from i.e. from :py:func:`get_library_upload_songs`
+        :param browse_id: Browse id of the upload album, i.e. from i.e. from :py:func:`get_library_upload_songs`
         :return: Dictionary with title, description, artist and tracks.
 
         Example album::
@@ -189,9 +189,8 @@ class UploadsMixin(MixinProtocol):
                 },
         """
         self._check_auth()
-        body = {"browseId": browseId}
-        endpoint = "browse"
-        response = self._send_request(endpoint, body)
+
+        response = self._send_request("browse", {"browseId": browse_id})
         album = parse_album_header(response)
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM + MUSIC_SHELF)
         album["tracks"] = parse_uploaded_items(results["contents"])
@@ -205,15 +204,14 @@ class UploadsMixin(MixinProtocol):
         :param filepath: Path to the music file (mp3, m4a, wma, flac or ogg)
         :return: Status String or full response
         """
-        self._check_auth()
-        if not self.auth_type == AuthType.BROWSER:
-            raise Exception("Please provide browser authentication before using this function")
+        self._check_auth(AuthType.BROWSER)
+
         if not os.path.isfile(filepath):
-            raise Exception("The provided file does not exist.")
+            raise FileNotFoundError("The provided file does not exist.")
 
         supported_filetypes = ["mp3", "m4a", "wma", "flac", "ogg"]
         if os.path.splitext(filepath)[1][1:] not in supported_filetypes:
-            raise Exception(
+            raise TypeError(
                 "The provided file type is not supported by YouTube Music. Supported file types are "
                 + ", ".join(supported_filetypes)
             )

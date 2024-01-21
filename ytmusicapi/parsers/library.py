@@ -1,17 +1,19 @@
 from ytmusicapi.continuations import get_continuations
 
-from ._utils import *
 from .playlists import parse_playlist_items
 from .songs import parse_song_runs
+from .utils import *
 
 
 def parse_artists(results, uploaded=False):
     artists = []
     for result in results:
         data = result[MRLIR]
-        artist = {}
-        artist["browseId"] = nav(data, NAVIGATION_BROWSE_ID)
-        artist["artist"] = get_item_text(data, 0)
+        artist = {
+            "browse_id": nav(data, NAVIGATION_BROWSE_ID),
+            "artist": get_item_text(data, 0),
+            "thumbnails": nav(data, THUMBNAILS, True),
+        }
         parse_menu_playlists(data, artist)
         if uploaded:
             artist["songs"] = get_item_text(data, 1).split(" ")[0]
@@ -19,7 +21,6 @@ def parse_artists(results, uploaded=False):
             subtitle = get_item_text(data, 1)
             if subtitle:
                 artist["subscribers"] = subtitle.split(" ")[0]
-        artist["thumbnails"] = nav(data, THUMBNAILS, True)
         artists.append(artist)
 
     return artists
@@ -45,11 +46,12 @@ def parse_albums(results):
     albums = []
     for result in results:
         data = result[MTRIR]
-        album = {}
-        album["browseId"] = nav(data, TITLE + NAVIGATION_BROWSE_ID)
-        album["playlistId"] = nav(data, MENU_PLAYLIST_ID, none_if_absent=True)
-        album["title"] = nav(data, TITLE_TEXT)
-        album["thumbnails"] = nav(data, THUMBNAIL_RENDERER)
+        album = {
+            "browse_id": nav(data, TITLE + NAVIGATION_BROWSE_ID),
+            "playlist_id": nav(data, MENU_PLAYLIST_ID, none_if_absent=True),
+            "title": nav(data, TITLE_TEXT),
+            "thumbnails": nav(data, THUMBNAIL_RENDERER),
+        }
 
         if "runs" in data["subtitle"]:
             album["type"] = nav(data, SUBTITLE)

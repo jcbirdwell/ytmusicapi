@@ -4,9 +4,7 @@ TRENDS = {"ARROW_DROP_UP": "up", "ARROW_DROP_DOWN": "down", "ARROW_CHART_NEUTRAL
 
 
 def parse_chart_song(data):
-    parsed = parse_song_flat(data)
-    parsed.update(parse_ranking(data))
-    return parsed
+    return parse_song_flat(data) | parse_ranking(data)
 
 
 def parse_chart_artist(data):
@@ -16,7 +14,7 @@ def parse_chart_artist(data):
 
     parsed = {
         "title": nav(get_flex_column_item(data, 0), TEXT_RUN_TEXT),
-        "browseId": nav(data, NAVIGATION_BROWSE_ID),
+        "browse_id": nav(data, NAVIGATION_BROWSE_ID),
         "subscribers": subscribers,
         "thumbnails": nav(data, THUMBNAILS),
     }

@@ -35,6 +35,7 @@ from ytmusicapi.parsers.i18n import Parser
 
 from .auth import OAuthCredentials, OAuthToken, RefreshingToken, Token
 from .auth.types import AuthType
+from .exceptions import WrongAuthType
 
 
 class YTMusicBase:
@@ -215,7 +216,7 @@ class YTMusicBase:
 
         return self._headers
 
-    def _send_request(self, endpoint: str, body: Dict, additionalParams: str = "") -> Dict:
+    def _send_request(self, endpoint: str, body: Dict, additional_params: str = "") -> Dict:
         body.update(self.context)
 
         # only required for post requests (?)
@@ -223,7 +224,7 @@ class YTMusicBase:
             self._headers.update(get_visitor_id(self._send_get_request))
 
         response = self._session.post(
-            YTM_BASE_API + endpoint + self.params + additionalParams,
+            YTM_BASE_API + endpoint + self.params + additional_params,
             json=body,
             headers=self.headers,
             proxies=self.proxies,
@@ -247,9 +248,16 @@ class YTMusicBase:
         )
         return response
 
-    def _check_auth(self):
-        if not self.auth:
-            raise Exception("Please provide authentication before using this function")
+    # todo: change to decorator
+    def _check_auth(self, specific_type: Optional[AuthType] = None):
+        if specific_type is not None:
+            if self.auth_type != specific_type:
+                raise WrongAuthType(
+                    f"Please provide {specific_type.name} authentication before using this function"
+                )
+
+        elif not self.auth:
+            raise WrongAuthType("Please provide authentication before using this function")
 
     def __enter__(self):
         return self

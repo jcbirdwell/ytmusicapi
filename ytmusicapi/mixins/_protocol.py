@@ -16,10 +16,10 @@ class MixinProtocol(Protocol):
 
     proxies: Optional[Dict[str, str]]
 
-    def _check_auth(self) -> None:
+    def _check_auth(self, specific_type: Optional[AuthType] = None) -> None:
         """checks if self has authentication"""
 
-    def _send_request(self, endpoint: str, body: Dict, additionalParams: str = "") -> Dict:
+    def _send_request(self, endpoint: str, body: Dict, additional_params: str = "") -> Dict:
         """for sending post requests to YouTube Music"""
 
     def _send_get_request(self, url: str, params: Optional[Dict] = None) -> Response:

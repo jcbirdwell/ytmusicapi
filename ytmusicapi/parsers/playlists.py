@@ -3,117 +3,88 @@ from typing import List, Optional
 from .songs import *
 
 
-def parse_playlist_items(results, menu_entries: Optional[List[List]] = None, by_artists=None):
+def parse_playlist_items(results, menu_entries: Optional[List[List]] = None, as_album=None):
     songs = []
     for result in results:
-        if MRLIR not in result:
+        if not (data := result.get(MRLIR, {})):
             continue
-        data = result[MRLIR]
+        if (title := get_item_text(data, 0) if "menu" in data else None) == "Song deleted":
+            continue
 
-        videoId = setVideoId = None
-        like = None
-        feedback_tokens = None
-        library_status = None
+        song = {
+            "video_id": None,
+            "title": title,
+            "artists": parse_pl_song_artists(data, 1, as_album=as_album),
+            "album": parse_song_album(data, 2),
+            "like_status": None,
+            "in_library": None,
+            "thumbnails": None,
+            "available": data.get("musicItemRendererDisplayPolicy", "GOOD_TO_GO") != UNAVAILABLE,
+            "explicit": nav(data, BADGE_LABEL, True) is not None,
+            "video_ype": None,
+            "set_video_id": None,
+            "feedback_tokens": None,
+        }
 
         # if the item has a menu, find its setVideoId
         if "menu" in data:
+            # fixme: this
             for item in nav(data, MENU_ITEMS):
                 if "menuServiceItemRenderer" in item:
                     menu_service = nav(item, MENU_SERVICE)
                     if "playlistEditEndpoint" in menu_service:
-                        setVideoId = nav(
+                        song["set_video_id"] = nav(
                             menu_service, ["playlistEditEndpoint", "actions", 0, "setVideoId"], True
                         )
-                        videoId = nav(
+                        song["video_id"] = nav(
                             menu_service, ["playlistEditEndpoint", "actions", 0, "removedVideoId"], True
                         )
 
                 if TOGGLE_MENU in item:
-                    feedback_tokens = parse_song_menu_tokens(item)
-                    library_status = parse_song_library_status(item)
+                    song["feedback_tokens"] = parse_song_menu_tokens(item)
+                    song["in_library"] = parse_song_library_status(item)
 
         # if item is not playable, the videoId was retrieved above
-        if nav(data, PLAY_BUTTON, none_if_absent=True) is not None:
-            if "playNavigationEndpoint" in nav(data, PLAY_BUTTON):
-                videoId = nav(data, PLAY_BUTTON)["playNavigationEndpoint"]["watchEndpoint"]["videoId"]
+        # fixme: if the above is true, integrate into above id pull
+        if (
+            play := nav(data, PLAY_BUTTON, none_if_absent=True)
+        ) is not None and "playNavigationEndpoint" in play:
+            song["video_id"] = play["playNavigationEndpoint"]["watchEndpoint"]["videoId"]
 
-                if "menu" in data:
-                    like = nav(data, MENU_LIKE_STATUS, True)
+            if "menu" in data:
+                song["likeStatus"] = nav(data, MENU_LIKE_STATUS, True)
 
-        title = get_item_text(data, 0)
-        if title == "Song deleted":
-            continue
-
-        # when parsing album, artists are passed in
-        # to assist polyfill on unlinked artists
-        artists = parse_pl_song_artists(data, 1, fill_artists=by_artists)
-
-        album = parse_song_album(data, 2)
-
-        views = None
-        if album and album["id"] is None:
+        if song["album"]["name"] is None and song["album"]["id"] is None:
             # views currently only present on albums and formatting is localization-dependent -> no parsing
-            if (views := (get_item_text(data, 2))) is not None:
-                album = None
+            if get_item_text(data, 2) is not None and as_album:
+                song["album"] = {"id": as_album["browse_id"], "name": as_album["name"]}
 
-        duration = None
         if "fixedColumns" in data:
-            if "simpleText" in get_fixed_column_item(data, 0)["text"]:
-                duration = get_fixed_column_item(data, 0)["text"]["simpleText"]
+            # two variations
+            if "simpleText" in (fork := get_fixed_column_item(data, 0)["text"]):
+                song["duration_s"] = parse_duration(fork["simpleText"])
             else:
-                duration = get_fixed_column_item(data, 0)["text"]["runs"][0]["text"]
+                song["duration_s"] = parse_duration(fork["runs"][0]["text"])
 
-        thumbnails = None
         if "thumbnail" in data:
-            thumbnails = nav(data, THUMBNAILS)
+            song["thumbnails"] = nav(data, THUMBNAILS)
 
-        isAvailable = True
-        if "musicItemRendererDisplayPolicy" in data:
-            isAvailable = (
-                data["musicItemRendererDisplayPolicy"] != "MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT"
-            )
-
-        isExplicit = nav(data, BADGE_LABEL, True) is not None
-
-        videoType = nav(
+        song["video_type"] = nav(
             data,
             MENU_ITEMS + [0, "menuNavigationItemRenderer", "navigationEndpoint"] + NAVIGATION_VIDEO_TYPE,
             True,
         )
 
-        song = {
-            "videoId": videoId,
-            "title": title,
-            "artists": artists,
-            "album": album,
-            "likeStatus": like,
-            "inLibrary": library_status,
-            "thumbnails": thumbnails,
-            "isAvailable": isAvailable,
-            "isExplicit": isExplicit,
-            "videoType": videoType,
-            "views": views,
-        }
-
-        if by_artists is not None:
-            song["track_number"] = int(nav(data, ["index", "runs", 0, "text"])) if isAvailable else None
-
-        if duration:
-            song["duration"] = duration
-            song["duration_seconds"] = parse_duration(duration)
-        if setVideoId:
-            song["setVideoId"] = setVideoId
-        if feedback_tokens:
-            song["feedbackTokens"] = feedback_tokens
+        if as_album is not None:
+            song["track_number"] = int(nav(data, ["index", "runs", 0, "text"])) if song["available"] else None
 
         if menu_entries:
             for menu_entry in menu_entries:
-                song[menu_entry[-1]] = nav(data, MENU_ITEMS + menu_entry)
+                if menu_entry[-1] == "feedbackToken":
+                    song["feedback_token"] = nav(data, MENU_ITEMS + menu_entry)
+                else:
+                    song[menu_entry[-1]] = nav(data, MENU_ITEMS + menu_entry)
 
         songs.append(song)
 
     return songs
-
-
-def validate_playlist_id(playlistId: str) -> str:
-    return playlistId if not playlistId.startswith("VL") else playlistId[2:]

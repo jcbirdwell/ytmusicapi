@@ -1,7 +1,5 @@
-from typing import Any, Dict, List
+from typing import Dict, List
 
-from ytmusicapi.navigation import CAROUSEL, CAROUSEL_TITLE, NAVIGATION_BROWSE_ID, nav
-from ytmusicapi.parsers._utils import i18n
 from ytmusicapi.parsers.browsing import (
     parse_album,
     parse_content_list,
@@ -9,6 +7,7 @@ from ytmusicapi.parsers.browsing import (
     parse_related_artist,
     parse_video,
 )
+from ytmusicapi.parsers.utils import get_ext, i18n
 
 
 class Parser:
@@ -29,27 +28,25 @@ class Parser:
         ]
 
     @i18n
-    def parse_artist_contents(self, results: List) -> Dict:
-        categories = ["albums", "singles", "videos", "playlists", "related"]
-        categories_local = [_("albums"), _("singles"), _("videos"), _("playlists"), _("related")]  # type: ignore[name-defined]
-        categories_parser = [parse_album, parse_album, parse_video, parse_playlist, parse_related_artist]
-        artist: Dict[str, Any] = {}
-        for i, category in enumerate(categories):
-            data = [
-                r["musicCarouselShelfRenderer"]
-                for r in results
-                if "musicCarouselShelfRenderer" in r
-                and nav(r, CAROUSEL + CAROUSEL_TITLE)["text"].lower() == categories_local[i]
-            ]
-            if len(data) > 0:
-                artist[category] = {"browseId": None, "results": []}
-                if "navigationEndpoint" in nav(data[0], CAROUSEL_TITLE):
-                    artist[category]["browseId"] = nav(data[0], CAROUSEL_TITLE + NAVIGATION_BROWSE_ID)
-                    if category in ["albums", "singles", "playlists"]:
-                        artist[category]["params"] = nav(data[0], CAROUSEL_TITLE)["navigationEndpoint"][
-                            "browseEndpoint"
-                        ]["params"]
+    def append_channel_contents(self, channel: Dict, results: List) -> Dict:
+        cat_map = {
+            _("albums"): ("albums", parse_album),  # type: ignore[name-defined]
+            _("singles"): ("singles", parse_album),  # type: ignore[name-defined]
+            _("videos"): ("videos", parse_video),  # type: ignore[name-defined]
+            _("playlists"): ("playlists", parse_playlist),  # type: ignore[name-defined]
+            _("related"): ("related", parse_related_artist),  # type: ignore[name-defined]
+            "featured on": ("features", parse_playlist),
+        }
 
-                artist[category]["results"] = parse_content_list(data[0]["contents"], categories_parser[i])
+        for shelf in results:
+            if not (render := shelf.get("musicCarouselShelfRenderer")):
+                continue
 
-        return artist
+            ext = get_ext(render["header"]["musicCarouselShelfBasicHeaderRenderer"])
+            key, func = cat_map[ext.pop("text")]
+            channel[key] = {"ext": ext, "items": parse_content_list(render["contents"], func)}
+
+            if "artist_id" not in channel and ext["type"] == "MUSIC_PAGE_TYPE_ARTIST_DISCOGRAPHY":
+                channel["artist_id"] = ext["browse_id"][4:]
+
+        return channel

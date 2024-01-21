@@ -28,7 +28,7 @@ class TestLibrary:
         albums = yt_oauth.get_library_albums(100)
         assert len(albums) > 50
         for album in albums:
-            assert "playlistId" in album
+            assert "playlist_id" in album
         albums = yt_brand.get_library_albums(100, order="a_to_z")
         assert len(albums) > 50
         albums = yt_brand.get_library_albums(100, order="z_to_a")
@@ -62,7 +62,7 @@ class TestLibrary:
         songs = yt_brand.get_liked_songs(200)
         assert len(songs["tracks"]) > 100
         songs = yt_empty.get_liked_songs()
-        assert songs["trackCount"] == 0
+        assert songs["track_count"] == 0
 
     def test_get_history(self, yt_oauth):
         songs = yt_oauth.get_history()
@@ -74,7 +74,7 @@ class TestLibrary:
         assert response.status_code == 204
         songs = yt_auth.get_history()
         assert len(songs) > 0
-        response = yt_auth.remove_history_items([songs[0]["feedbackToken"]])
+        response = yt_auth.remove_history_items([songs[0]["feedback_token"]])
         assert "feedbackResponses" in response
 
     def test_rate_song(self, yt_auth, sample_video):
@@ -85,13 +85,13 @@ class TestLibrary:
 
     def test_edit_song_library_status(self, yt_brand, sample_album):
         album = yt_brand.get_album(sample_album)
-        response = yt_brand.edit_song_library_status(album["tracks"][0]["feedbackTokens"]["add"])
+        response = yt_brand.edit_song_library_status(album["tracks"][0]["feedback_tokens"]["add"])
         album = yt_brand.get_album(sample_album)
-        assert album["tracks"][0]["inLibrary"]
+        assert album["tracks"][0]["in_library"]
         assert response["feedbackResponses"][0]["isProcessed"]
-        response = yt_brand.edit_song_library_status(album["tracks"][0]["feedbackTokens"]["remove"])
+        response = yt_brand.edit_song_library_status(album["tracks"][0]["feedback_tokens"]["remove"])
         album = yt_brand.get_album(sample_album)
-        assert not album["tracks"][0]["inLibrary"]
+        assert not album["tracks"][0]["in_library"]
         assert response["feedbackResponses"][0]["isProcessed"]
 
     def test_rate_playlist(self, yt_auth):
