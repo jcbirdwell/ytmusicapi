@@ -23,13 +23,14 @@ def parse_playlist_items(results, menu_entries: Optional[List[List]] = None, con
             "feedback_tokens": None,
         }
 
-        # album contexts skip per-track album and thumbnail spec, but add track_numbers
-        if context is not None:
-            song["track_number"] = int(nav(data, ["index", "runs", 0, "text"])) if song["available"] else None
-        else:
-            song['album'] = parse_song_album(data, 2)
+        if context is None:
+            song["album"] = parse_song_album(data, -1)  # liked=2 songs=3
             if "thumbnail" in data:
                 song["thumbnails"] = nav(data, THUMBNAILS)
+
+        # album contexts skip per-track album and thumbnail spec, but add track_numbers
+        else:
+            song["track_number"] = int(nav(data, ["index", "runs", 0, "text"])) if song["available"] else None
 
         # if the item has a menu, find its setVideoId
         if "menu" in data:
@@ -59,9 +60,8 @@ def parse_playlist_items(results, menu_entries: Optional[List[List]] = None, con
         # if item is not playable, the videoId was retrieved above
         if song["video_id"] is None:
             if (
-                    (play := nav(data, PLAY_BUTTON, none_if_absent=True)) is not None
-                    and "playNavigationEndpoint" in play
-            ):
+                play := nav(data, PLAY_BUTTON, none_if_absent=True)
+            ) is not None and "playNavigationEndpoint" in play:
                 song["video_id"] = play["playNavigationEndpoint"]["watchEndpoint"]["videoId"]
 
         if "fixedColumns" in data:

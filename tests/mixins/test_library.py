@@ -64,6 +64,7 @@ class TestLibrary:
         assert match is not None
         assert match["in_library"]
         assert match["like_status"] == "LIKE"
+        assert match["album"]["id"] is not None
 
         songs = yt_brand.get_liked_songs(200)
         assert len(songs["tracks"]) > 100

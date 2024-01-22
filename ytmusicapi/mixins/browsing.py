@@ -5,7 +5,7 @@ from ytmusicapi.continuations import (
     get_continuations,
     get_reloadable_continuation_params,
 )
-from ytmusicapi.helpers import YTM_DOMAIN, sum_total_duration
+from ytmusicapi.helpers import YTM_DOMAIN
 from ytmusicapi.parsers.albums import parse_album_header
 from ytmusicapi.parsers.browsing import parse_album, parse_content_list, parse_mixed_content, parse_playlist
 from ytmusicapi.parsers.library import parse_albums
@@ -228,8 +228,6 @@ class BrowsingMixin(MixinProtocol):
             artist["view_count"] = parse_real_count(nav(description_shelf, ["subheader", "runs", 0], True))
         subscription_button = header["subscriptionButton"]["subscribeButtonRenderer"]
         artist["channel_id"] = subscription_button["channelId"]
-        if artist["channel_id"] != channel_id:
-            artist["artist_id"] = channel_id
 
         # artist channels accessed via their artist_id has a different layout
         if "watchPlaylistEndpoint" in (
@@ -238,6 +236,7 @@ class BrowsingMixin(MixinProtocol):
             artist["shuffle_id"] = nav_fork["watchPlaylistEndpoint"]["playlistId"]
             artist["page_type"] = "channel"
         else:
+            artist["artist_id"] = channel_id
             artist["shuffle_id"] = nav_fork["watchEndpoint"]["playlistId"]
             artist["page_type"] = "artist"
             song_shelf = results[0]["musicShelfRenderer"]

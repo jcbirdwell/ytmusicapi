@@ -4,15 +4,17 @@ import pytest
 
 
 class TestBrowsing:
-    def test_get_home(self, yt, yt_auth):
-        result = yt.get_home(limit=6)
-        assert len(result) >= 6
-        result = yt_auth.get_home(limit=15)
-        assert len(result) >= 15
-
     def test_get_artist(self, yt, yt_oauth, liked_song_artist_id):
         # test handling of non-implemented sections by parser.append_channel_contents
         yt_oauth.get_artist(liked_song_artist_id)
+
+        # Wet Baes; artist with no extensions on albums/singles
+        artist = yt.get_artist("UCB-qDrhpXQanKPPSu9GKLQA")
+        assert "artist_id" in artist
+        # ensure artist songs are being correctly parsed
+        targ = next((x for x in artist["songs"]["items"] if x["video_id"] == "ZZZ26yeKsnA"), None)
+        assert targ is not None
+        assert targ["album"]["id"] is not None
 
         artist = yt.get_artist("MPLAUCmMUZbaYdNH0bEd1PAlAqsA")
         assert len(artist) == 17
@@ -62,6 +64,12 @@ class TestBrowsing:
         results_empty = yt.get_user_playlists(user["playlists"]["ext"])
         assert len(results_empty) == 0
 
+    def test_get_home(self, yt, yt_auth):
+        result = yt.get_home(limit=6)
+        assert len(result) >= 6
+        result = yt_auth.get_home(limit=15)
+        assert len(result) >= 15
+
     def test_get_album_browse_id(self, yt, sample_album):
         warnings.filterwarnings(action="ignore", category=DeprecationWarning)
         browse_id = yt.get_album_browse_id("OLAK5uy_nMr9h2VlS-2PULNz3M3XVXQj_P3C2bqaY")
@@ -88,17 +96,17 @@ class TestBrowsing:
         album = yt.get_album("MPREb_rqH94Zr3NN0")
         assert len(album["tracks"][0]["artists"]) == 2
 
-        album_id = 'MPREb_ObbUYP3Kjuy'  # Notion EP - Tash Sultana
+        album_id = "MPREb_ObbUYP3Kjuy"  # Notion EP - Tash Sultana
         album = yt_auth.get_album(album_id)
-        t0 = album['tracks'][0]
+        t0 = album["tracks"][0]
 
         # keys specific to playlist parsing
-        assert 'album' not in t0
-        assert 'thumbnails' not in t0
-        assert 'set_video_id' not in t0
+        assert "album" not in t0
+        assert "thumbnails" not in t0
+        assert "set_video_id" not in t0
 
-        assert 'name' in t0
-        assert t0['artists'] == album['artists']  # Tash is solo artist on this track
+        assert "name" in t0
+        assert t0["artists"] == album["artists"]  # Tash is solo artist on this track
 
     def test_get_album_track_numbers(self, yt):
         # album with tracks completely removed/missing
