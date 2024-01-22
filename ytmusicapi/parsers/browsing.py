@@ -80,7 +80,7 @@ def parse_album(result):
 
 def parse_song(result):
     song = {
-        "title": nav(result, TITLE_TEXT),
+        "name": nav(result, TITLE_TEXT),
         "video_id": nav(result, NAVIGATION_VIDEO_ID),
         "playlist_id": nav(result, NAVIGATION_PLAYLIST_ID, True),
         "thumbnails": nav(result, THUMBNAIL_RENDERER),
@@ -92,7 +92,7 @@ def parse_song(result):
 def parse_song_flat(data):
     columns = [get_flex_column_item(data, i) for i in range(0, len(data["flexColumns"]))]
     song = {
-        "title": nav(columns[0], TEXT_RUN_TEXT),
+        "name": nav(columns[0], TEXT_RUN_TEXT),
         "video_id": nav(columns[0], TEXT_RUN + NAVIGATION_VIDEO_ID, True),
         "artists": parse_pl_song_artists(data, 1),
         "thumbnails": nav(data, THUMBNAILS),
@@ -125,7 +125,7 @@ def parse_video(result):
             None,
         )  # this won't match anything for episodes, None to catch iterator
     result = {
-        "title": nav(result, TITLE_TEXT),
+        "name": nav(result, TITLE_TEXT),
         "video_id": video_id,
         "playlist_id": nav(result, NAVIGATION_PLAYLIST_ID, True),
         "thumbnails": nav(result, THUMBNAIL_RENDERER, True),

@@ -43,7 +43,12 @@ class Parser:
                 continue
 
             ext = get_ext(render["header"]["musicCarouselShelfBasicHeaderRenderer"])
-            key, func = cat_map[ext.pop("text")]
+
+            # todo: add parser for "from your library" songs
+            if (targ := ext.pop("text")) not in cat_map:
+                continue
+
+            key, func = cat_map[targ]
             channel[key] = {"ext": ext, "items": parse_content_list(render["contents"], func)}
 
             if "artist_id" not in channel and ext["type"] == "MUSIC_PAGE_TYPE_ARTIST_DISCOGRAPHY":
