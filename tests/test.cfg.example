@@ -5,6 +5,7 @@ headers = headers_auth_json_as_string
 headers_empty = headers_account_with_empty_library_as_json_as_string
 browser_file = ./browser.json
 oauth_file = ./oauth.json
+oauth_token = pasted_version_of_oauth_file_without_enclosing_quotes
 headers_raw = raw_headers_pasted_from_browser
 
 [queries]
