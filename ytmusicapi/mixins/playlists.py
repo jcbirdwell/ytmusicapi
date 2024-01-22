@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ytmusicapi.continuations import *
-from ytmusicapi.helpers import sum_total_duration, to_int
+from ytmusicapi.helpers import to_int
 from ytmusicapi.navigation import *
 from ytmusicapi.parsers.browsing import parse_content_list, parse_playlist
 from ytmusicapi.parsers.playlists import *
@@ -116,7 +116,7 @@ class PlaylistsMixin(MixinProtocol):
             playlist["privacy"] = header["editHeader"]["musicPlaylistEditHeaderRenderer"]["privacy"]
             header = header["header"]["musicDetailHeaderRenderer"]
 
-        playlist["title"] = nav(header, TITLE_TEXT)
+        playlist["name"] = nav(header, TITLE_TEXT)
         playlist["thumbnails"] = nav(header, THUMBNAIL_CROPPED)
         playlist["description"] = nav(header, DESCRIPTION, True)
         run_count = len(nav(header, SUBTITLE_RUNS))
@@ -193,7 +193,7 @@ class PlaylistsMixin(MixinProtocol):
                     )
                 )
 
-        playlist["duration_s"] = sum_total_duration(playlist)
+        # playlist["duration_s"] = sum_total_duration(playlist)
         return playlist
 
     def get_liked_songs(self, limit: int = 100) -> Dict:

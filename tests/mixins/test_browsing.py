@@ -10,8 +10,9 @@ class TestBrowsing:
         result = yt_auth.get_home(limit=15)
         assert len(result) >= 15
 
-    def test_get_artist(self, yt, yt_auth):
-        artist = yt_auth.get_artist("UC4d_vtW49N5p9QV-6V5GKQQ")  # artist of liked song
+    def test_get_artist(self, yt, yt_oauth, liked_song_artist_id):
+        # test handling of non-implemented sections by parser.append_channel_contents
+        yt_oauth.get_artist(liked_song_artist_id)
 
         artist = yt.get_artist("MPLAUCmMUZbaYdNH0bEd1PAlAqsA")
         assert len(artist) == 17

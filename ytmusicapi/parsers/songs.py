@@ -102,8 +102,8 @@ def parse_song_menu_tokens(item):
     return {"add": library_add_token, "remove": library_remove_token}
 
 
+# todo: ensure this works with disliked
 def parse_like_status(service):
     if service is None:
         return None
-    status = ["LIKE", "INDIFFERENT"]
-    return status[status.index(service["likeEndpoint"]["status"]) - 1]
+    return next((x for x in ["LIKE", "INDIFFERENT"] if x != service["likeEndpoint"]["status"]), None)

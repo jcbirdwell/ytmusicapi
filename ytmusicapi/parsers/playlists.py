@@ -21,7 +21,7 @@ def parse_playlist_items(results, menu_entries: Optional[List[List]] = None, as_
             "thumbnails": None,
             "available": data.get("musicItemRendererDisplayPolicy", "GOOD_TO_GO") != UNAVAILABLE,
             "explicit": nav(data, BADGE_LABEL, True) is not None,
-            "video_ype": None,
+            "video_type": None,
             "set_video_id": None,
             "feedback_tokens": None,
         }
@@ -52,7 +52,7 @@ def parse_playlist_items(results, menu_entries: Optional[List[List]] = None, as_
             song["video_id"] = play["playNavigationEndpoint"]["watchEndpoint"]["videoId"]
 
             if "menu" in data:
-                song["likeStatus"] = nav(data, MENU_LIKE_STATUS, True)
+                song["like_status"] = nav(data, MENU_LIKE_STATUS, True)
 
         if song["album"]["name"] is None and song["album"]["id"] is None:
             # views currently only present on albums and formatting is localization-dependent -> no parsing

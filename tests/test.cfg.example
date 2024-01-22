@@ -20,6 +20,10 @@ library_playlists = query_gives_gte_1_playlist
 own = owned_playlist_id
 own_length = number_of_tracks_in_playlist
 
+[liked]
+video_id = oauth_account_liked_song_with_one_artist
+artist_id = id_of_solo_artist_of_above_track
+
 [albums]
 album_browse_id = sample_id_of_regionally_available_album
 album_track_length = available_album_length

@@ -30,6 +30,21 @@ def fixture_sample_video() -> str:
     return "hpSrLjc5SMs"
 
 
+@pytest.fixture(name="liked_song_id")
+def fixture_liked_song_id(config) -> str:
+    """
+    A video_id of a track in oauth account's liked songs
+                ** with one artist **
+    """
+    return config["liked"]["video_id"]
+
+
+@pytest.fixture(name="liked_song_artist_id")
+def fixture_liked_song_artist_id(config) -> str:
+    """The artist_id of a liked track"""
+    return config["liked"]["artist_id"]
+
+
 @pytest.fixture(name="sample_playlist")
 def fixture_sample_playlist() -> str:
     """very large playlist"""

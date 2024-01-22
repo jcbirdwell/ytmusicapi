@@ -58,7 +58,13 @@ class TestLibrary:
         artists = yt_empty.get_library_subscriptions()
         assert len(artists) == 0
 
-    def test_get_liked_songs(self, yt_brand, yt_empty):
+    def test_get_liked_songs(self, yt_brand, yt_empty, yt_oauth, liked_song_id):
+        songs = yt_oauth.get_liked_songs()
+        match = next((track for track in songs["tracks"] if track["video_id"] == liked_song_id), None)
+        assert match is not None
+        assert match["in_library"]
+        assert match["like_status"] == "LIKE"
+
         songs = yt_brand.get_liked_songs(200)
         assert len(songs["tracks"]) > 100
         songs = yt_empty.get_liked_songs()

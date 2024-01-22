@@ -40,7 +40,7 @@ class TestPlaylists:
         assert response == "STATUS_SUCCEEDED", "Playlist edit failed"
         yt_brand.edit_playlist(
             playlist["id"],
-            title=playlist["title"],
+            title=playlist["name"],
             description=playlist["description"],
             privacy_status=playlist["privacy"],
             move_item=(
