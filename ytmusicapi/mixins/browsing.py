@@ -495,11 +495,11 @@ class BrowsingMixin(MixinProtocol):
         album = parse_album_header(response)
         album["browse_id"] = browse_id
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM + MUSIC_SHELF)
-        album["tracks"] = parse_playlist_items(results["contents"], as_album=album)
+        album["tracks"] = parse_playlist_items(results["contents"], context=album)
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST + [1] + CAROUSEL, True)
         if results is not None:
             album["other_versions"] = parse_content_list(results["contents"], parse_album)
-        album["duration_s"] = sum_total_duration(album)
+        # album["duration_s"] = sum_total_duration(album)
 
         return album
 

@@ -78,8 +78,8 @@ class TestBrowsing:
         assert len(album) >= 9
         assert "explicit" in album
         assert album["tracks"][0]["explicit"]
+
         # assert all(item["views"] is not None for item in album["tracks"])
-        assert all(item["album"] is not None for item in album["tracks"])
         assert album["tracks"][0]["track_number"] == 1
         assert "feedback_tokens" in album["tracks"][0]
         album = yt.get_album("MPREb_BQZvl3BFGay")
@@ -87,6 +87,18 @@ class TestBrowsing:
         assert len(album["tracks"][0]["artists"]) == 1
         album = yt.get_album("MPREb_rqH94Zr3NN0")
         assert len(album["tracks"][0]["artists"]) == 2
+
+        album_id = 'MPREb_ObbUYP3Kjuy'  # Notion EP - Tash Sultana
+        album = yt_auth.get_album(album_id)
+        t0 = album['tracks'][0]
+
+        # keys specific to playlist parsing
+        assert 'album' not in t0
+        assert 'thumbnails' not in t0
+        assert 'set_video_id' not in t0
+
+        assert 'name' in t0
+        assert t0['artists'] == album['artists']  # Tash is solo artist on this track
 
     def test_get_album_track_numbers(self, yt):
         # album with tracks completely removed/missing

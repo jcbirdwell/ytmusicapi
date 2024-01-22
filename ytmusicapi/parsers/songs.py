@@ -6,7 +6,9 @@ from .utils import *
 def parse_pl_song_artists(data, index, as_album=None):
     flex_item = get_flex_column_item(data, index)
     if not flex_item:
-        return None
+        # when it's an album and no per-track artists are displayed,
+        # assume album artists == track artists
+        return None if as_album is None else as_album['artists']
 
     artists = artists_from_runs(flex_item["text"]["runs"], 0)
     # check if track came from album without linked artists
