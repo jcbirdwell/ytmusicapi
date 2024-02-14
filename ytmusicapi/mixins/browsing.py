@@ -502,6 +502,16 @@ class BrowsingMixin(MixinProtocol):
 
         return album
 
+    def _player_response(self, video_id: str, signature_timestamp: Optional[int] = None):
+        if not signature_timestamp:
+            signature_timestamp = get_datestamp() - 1
+
+        params = {
+            "playbackContext": {"contentPlaybackContext": {"signatureTimestamp": signature_timestamp}},
+            "video_id": video_id,
+        }
+        return self._send_request("player", params)
+
     def get_song(self, video_id: str, signature_timestamp: Optional[int] = None) -> Dict:
         """
         Returns metadata and streaming information about a song or video.
@@ -673,14 +683,8 @@ class BrowsingMixin(MixinProtocol):
             }
 
         """
-        if not signature_timestamp:
-            signature_timestamp = get_datestamp() - 1
 
-        params = {
-            "playbackContext": {"contentPlaybackContext": {"signatureTimestamp": signature_timestamp}},
-            "video_id": video_id,
-        }
-        response = self._send_request("player", params)
+        response = self._player_response(video_id, signature_timestamp)
         keys = ["videoDetails", "playabilityStatus", "streamingData", "microformat", "playbackTracking"]
         for k in list(response.keys()):
             if k not in keys:
