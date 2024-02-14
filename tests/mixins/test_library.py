@@ -1,5 +1,7 @@
 import pytest
 
+from ytmusicapi.exceptions import WrongAuthType
+
 
 class TestLibrary:
     def test_get_library_playlists(self, config, yt_oauth, yt_empty):
@@ -107,6 +109,11 @@ class TestLibrary:
         response = yt_auth.rate_playlist("OLAK5uy_l3g4WcHZsEx_QuEDZzWEiyFzZl6pL0xZ4", "INDIFFERENT")
         assert "actions" in response
 
-    def test_subscribe_artists(self, yt_auth):
+    def test_subscribe_artists(self, yt_auth, yt):
         yt_auth.subscribe_artists(["UCUDVBtnOQi4c7E8jebpjc9Q", "UCiMhD4jzUqG-IgPzUmmytRQ"])
-        yt_auth.unsubscribe_artists(["UCUDVBtnOQi4c7E8jebpjc9Q", "UCiMhD4jzUqG-IgPzUmmytRQ"])
+        yt_auth.subscribe_artist("UCoIyS9hbe-yyxoDNwT4nvfw")
+        yt_auth.unsubscribe_artists(["UCoIyS9hbe-yyxoDNwT4nvfw", "UCiMhD4jzUqG-IgPzUmmytRQ"])
+        yt_auth.unsubscribe_artists(["UCUDVBtnOQi4c7E8jebpjc9Q"])
+
+        with pytest.raises(WrongAuthType):
+            yt.subscribe_artists(["UCUDVBtnOQi4c7E8jebpjc9Q"])

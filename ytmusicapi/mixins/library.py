@@ -1,3 +1,4 @@
+import warnings
 from random import randint
 from typing import Dict, List, Optional
 
@@ -298,24 +299,56 @@ class LibraryMixin(MixinProtocol):
 
         return self._send_request(endpoint, {"target": {"playlistId": playlist_id}})
 
-    def subscribe_artists(self, channel_ids: List[str]) -> Dict:
+    def subscribe_artist(self, channel_id: str) -> Dict:
         """
-        Subscribe to artists. Adds the artists to your library
+        Unsubscribe from artist. Removes the artist from your library.
+
+        :param channel_id: Artist channel id
+        :return: Full responses
+        """
+
+        self._check_auth()
+        return self._send_request("subscription/subscribe", {"channelIds": [channel_id]})
+
+    def subscribe_artists(self, channel_ids: List[str]) -> List[Dict]:
+        """
+        DEPRECIATED. Subscribe to artists. Adds the artists to your library.
 
         :param channel_ids: Artist channel ids
         :return: Full response
         """
-        self._check_auth()
+        # self._check_auth()
 
-        return self._send_request("subscription/subscribe", {"channelIds": channel_ids})
+        warnings.warn(
+            "API no longer allows multiple subs/unsubs in a single request, " "performing sequentially.",
+            DeprecationWarning,
+        )
 
-    def unsubscribe_artists(self, channel_ids: List[str]) -> Dict:
+        return [self.subscribe_artist(channel_id) for channel_id in channel_ids]
+
+    def unsubscribe_artist(self, channel_id: str) -> Dict:
         """
-        Unsubscribe from artists. Removes the artists from your library
+        Unsubscribe from artist. Removes the artist from your library
 
-        :param channel_ids: Artist channel ids
+        :param channel_id: Artist channel id
         :return: Full response
         """
         self._check_auth()
 
-        return self._send_request("subscription/unsubscribe", {"channelIds": channel_ids})
+        return self._send_request("subscription/unsubscribe", {"channelIds": [channel_id]})
+
+    def unsubscribe_artists(self, channel_ids: List[str]) -> List[Dict]:
+        """
+        DEPRECIATED. Unsubscribe from artists. Removes the artists from your library
+
+        :param channel_ids: Artist channel ids
+        :return: Full responses
+        """
+        # self._check_auth()
+
+        warnings.warn(
+            "API no longer allows multiple subs/unsubs in a single request, " "performing sequentially.",
+            DeprecationWarning,
+        )
+
+        return [self.unsubscribe_artist(channel_id) for channel_id in channel_ids]
