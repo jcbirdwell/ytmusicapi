@@ -11,6 +11,7 @@ from ytmusicapi.parsers.browsing import parse_album, parse_content_list, parse_m
 from ytmusicapi.parsers.library import parse_albums
 from ytmusicapi.parsers.playlists import parse_playlist_items
 
+from ..models import CoreTrack
 from ..navigation import *
 from ..parsers.utils import get_ext, parse_real_count  # protected ?
 from ._protocol import MixinProtocol
@@ -690,6 +691,9 @@ class BrowsingMixin(MixinProtocol):
             if k not in keys:
                 del response[k]
         return response
+
+    def get_track(self, video_id: str):
+        return CoreTrack(**self._player_response(video_id)["videoDetails"])
 
     def get_song_related(self, browse_id: str):
         """

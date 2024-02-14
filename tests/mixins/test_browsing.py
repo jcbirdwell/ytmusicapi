@@ -2,6 +2,8 @@ import warnings
 
 import pytest
 
+from ytmusicapi.models import CoreTrack
+
 
 class TestBrowsing:
     def test_get_artist(self, yt, yt_oauth, liked_song_artist_id):
@@ -161,6 +163,10 @@ class TestBrowsing:
         assert len(song) == 5
         song = yt.get_song(sample_video)
         assert len(song["streamingData"]["adaptiveFormats"]) >= 10
+
+    def test_get_track(self, yt, sample_video):
+        track = yt.get_track(sample_video)
+        assert isinstance(track, CoreTrack)
 
     def test_get_song_related_content(self, yt_oauth, sample_video):
         song = yt_oauth.get_watch_playlist(sample_video)
