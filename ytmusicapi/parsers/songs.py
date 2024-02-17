@@ -8,7 +8,7 @@ def parse_pl_song_artists(data, index, as_album=None):
     if not flex_item:
         # when it's an album and no per-track artists are displayed,
         # assume album artists == track artists
-        return None if as_album is None else as_album['artists']
+        return None if as_album is None else as_album["artists"]
 
     artists = artists_from_runs(flex_item["text"]["runs"], 0)
     # check if track came from album without linked artists
@@ -47,7 +47,7 @@ def artists_from_runs(runs, offset=2):
     return [parse_id_name(runs[idx]) for idx in range(offset, len(runs), 2)]
 
 
-def parse_song_runs(runs):
+def parse_song_runs(runs, search_result=False):
     parsed = {"artists": []}
     for i, run in enumerate(runs):
         if i % 2:  # uneven items are always separators
@@ -72,7 +72,7 @@ def parse_song_runs(runs):
             elif re.match(r"^\d{4}$", run["text"]):
                 parsed["year"] = run["text"]
 
-            else:  # artist without id
+            elif not search_result:  # artist without id unless search result -> result type
                 parsed["artists"].append({"name": run["text"], "id": None})
 
     return parsed

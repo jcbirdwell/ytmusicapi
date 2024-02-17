@@ -34,12 +34,13 @@ def parse_top_result(data, search_result_types):
             search_result["video_type"] = nav(on_tap, NAVIGATION_VIDEO_TYPE)
 
     if result_type in ["song", "video", "album"]:
-        search_result["video_id"] = nav(data, ["onTap"] + WATCH_VIDEO_ID, True)
-        search_result["video_type"] = nav(data, ["onTap"] + NAVIGATION_VIDEO_TYPE, True)
+        if result_type != "album":
+            search_result["video_id"] = nav(data, ["onTap"] + WATCH_VIDEO_ID, True)
+            search_result["video_type"] = nav(data, ["onTap"] + NAVIGATION_VIDEO_TYPE, True)
 
         search_result["title"] = nav(data, TITLE_TEXT)
         runs = nav(data, ["subtitle", "runs"])
-        song_info = parse_song_runs(runs)
+        song_info = parse_song_runs(runs, search_result=True)
         search_result.update(song_info)
 
     if result_type in ["album"]:

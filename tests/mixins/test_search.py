@@ -86,3 +86,19 @@ class TestSearch:
             yt_oauth.search("beatles", only="community_playlists", scope="library", limit=40)
         with pytest.raises(Exception):
             yt_oauth.search("beatles", only="featured_playlists", scope="library", limit=40)
+
+    def test_search_parsing(self, yt):
+        results = yt.search("Lie Danny Ray")
+        assert results[0]["category"] == "Top result"
+        assert results[0]["result_type"] == "song"
+        assert results[0]["video_id"] == "9kzS4SYNh00"
+        assert len(results[0]["artists"]) == 1
+        assert results[0]["artists"][0] == {"id": "UCDPNdGy1h37QKaf2I_zCIpQ", "name": "Danny Ray"}
+
+        results = yt.search("HISTORY deluxe the knocks")
+        assert results[0]["category"] == "Top result"
+        assert results[0]["result_type"] == "album"
+        assert results[0]["browse_id"] == "MPREb_XsL6g62KP1S"
+        assert "video_id" not in results[0]
+        assert len(results[0]["artists"]) == 1
+        assert results[0]["artists"][0] == {"id": "UCykKxVGTgKUm3L4vWqrO6eQ", "name": "The Knocks"}
