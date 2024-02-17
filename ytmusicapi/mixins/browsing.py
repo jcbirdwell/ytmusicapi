@@ -230,15 +230,18 @@ class BrowsingMixin(MixinProtocol):
         subscription_button = header["subscriptionButton"]["subscribeButtonRenderer"]
         artist["channel_id"] = subscription_button["channelId"]
 
+        if "playButton" in header:
+            nav_fork = header["playButton"]["buttonRenderer"]["navigationEndpoint"]
+        else:
+            nav_fork = None
+
         # artist channels accessed via their artist_id has a different layout
-        if "watchPlaylistEndpoint" in (
-            nav_fork := header["playButton"]["buttonRenderer"]["navigationEndpoint"]
-        ):
+        if nav_fork and "watchPlaylistEndpoint" in nav_fork:
             artist["shuffle_id"] = nav_fork["watchPlaylistEndpoint"]["playlistId"]
             artist["page_type"] = "channel"
         else:
             artist["artist_id"] = channel_id
-            artist["shuffle_id"] = nav_fork["watchEndpoint"]["playlistId"]
+            artist["shuffle_id"] = None if not nav_fork else nav_fork["watchEndpoint"]["playlistId"]
             artist["page_type"] = "artist"
             song_shelf = results[0]["musicShelfRenderer"]
             artist["songs"] = {
@@ -246,7 +249,7 @@ class BrowsingMixin(MixinProtocol):
                 "items": parse_playlist_items(song_shelf["contents"]),
             }
 
-        artist["radio_id"] = artist["shuffle_id"].replace("RDAO", "RDEM")
+        artist["radio_id"] = artist["shuffle_id"].replace("RDAO", "RDEM") if artist["shuffle_id"] else None
         artist["sub_count"] = parse_real_count(
             nav(subscription_button, ["subscriberCountText", "runs", 0], True)
         )

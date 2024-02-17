@@ -37,6 +37,10 @@ class TestBrowsing:
         artist = yt.get_artist("UCLZ7tlKC06ResyDmEStSrOw")  # no album year
         assert len(artist) >= 11
 
+        artist = yt.get_artist("UChba9Uwyjph2ZPjQOposwfg")  # no radio/shuffle button
+        assert artist["radio_id"] is None
+        assert artist["page_type"] == "artist"
+
     def test_get_artist_albums(self, yt):
         artist = yt.get_artist("UCAeLFBCQS7FvI8PvBrWvSBg")
         results = yt.get_artist_albums(artist["albums"]["ext"])
