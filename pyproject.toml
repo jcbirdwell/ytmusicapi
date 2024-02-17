@@ -2,8 +2,11 @@
 name = "ytmusicapi"
 description = "Unofficial API for YouTube Music"
 requires-python = ">=3.8"
-authors=[{name = "sigma67", email= "ytmusicapi@gmail.com"}]
-license={file="LICENSE"}
+authors = [
+    {name = "sigma67", email= "ytmusicapi@gmail.com"},
+    {name = "jcbirdwell", email = "j.c.birdwell@gmail.com"},
+]
+license = {file="LICENSE"}
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -18,9 +21,9 @@ dynamic = ["version", "readme"]
 ytmusicapi = "ytmusicapi.setup:main"
 
 [project.urls]
-homepage = "https://github.com/sigma67/ytmusicapi"
+homepage = "https://github.com/jcbirdwell/ytmusicapi"
 documentation = "https://ytmusicapi.readthedocs.io"
-repository = "https://github.com/sigma67/ytmusicapi"
+repository = "https://github.com/jcbirdwell/ytmusicapi"
 
 [build-system]
 requires = ["setuptools>=65", "setuptools_scm[toml]>=7"]
