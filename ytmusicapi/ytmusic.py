@@ -33,7 +33,7 @@ from ytmusicapi.mixins.uploads import UploadsMixin
 from ytmusicapi.mixins.watch import WatchMixin
 from ytmusicapi.parsers.i18n import Parser
 
-from .auth import OAuthCredentials, OAuthToken, RefreshingToken, Token
+from .auth import OAuthCredentials, OAuthToken, RefreshingToken
 from .auth.types import AuthType
 from .exceptions import WrongAuthType
 
@@ -97,7 +97,7 @@ class YTMusicBase:
 
         self.auth_type: AuthType = AuthType.UNAUTHORIZED
 
-        self._token: Token  #: OAuth credential handler
+        self._token: RefreshingToken  #: OAuth credential handler
         self.oauth_credentials: OAuthCredentials  #: Client used for OAuth refreshing
 
         self._session: requests.Session  #: request session for connection pooling

@@ -19,6 +19,11 @@ class AuthType(int, Enum):
         }
         return all(key in headers for key in oauth_structure)
 
+    @classmethod
+    def is_browser(cls, headers: CaseInsensitiveDict) -> bool:
+        browser_structure = {"Authorization", "Cookie"}
+        return all(key in headers for key in browser_structure)
+
     UNAUTHORIZED = auto()
 
     BROWSER = auto()

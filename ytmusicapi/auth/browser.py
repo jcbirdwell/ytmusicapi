@@ -2,16 +2,9 @@ import os
 import platform
 from typing import Optional
 
-from requests.structures import CaseInsensitiveDict
-
 from ytmusicapi.helpers import *
 
 path = os.path.dirname(os.path.realpath(__file__)) + os.sep
-
-
-def is_browser(headers: CaseInsensitiveDict) -> bool:
-    browser_structure = {"authorization", "cookie"}
-    return all(key in headers for key in browser_structure)
 
 
 def setup_browser(filepath: Optional[str] = None, headers_raw: Optional[str] = None) -> str:

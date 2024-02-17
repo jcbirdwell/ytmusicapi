@@ -23,6 +23,9 @@ class TestLibrary:
         assert len(songs) >= config.getint("limits", "library_songs")
         songs = yt_oauth.get_library_songs(order="a_to_z")
         assert len(songs) >= 25
+        with pytest.raises(Exception):
+            yt_oauth.get_library_songs(order="upsidedown")
+
         songs = yt_empty.get_library_songs()
         assert len(songs) == 0
 
@@ -89,6 +92,10 @@ class TestLibrary:
     def test_rate_song(self, yt_auth, sample_video):
         response = yt_auth.rate_song(sample_video, "LIKE")
         assert "actions" in response
+        response = yt_auth.rate_song(sample_video, "DISLIKE")
+        assert "actions" in response
+        response = yt_auth.rate_song(sample_video, "HUH?")
+        assert response is None
         response = yt_auth.rate_song(sample_video, "INDIFFERENT")
         assert "actions" in response
 

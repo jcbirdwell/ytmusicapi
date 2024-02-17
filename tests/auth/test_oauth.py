@@ -108,3 +108,7 @@ class TestOAuth:
 
     def test_alt_oauth_request(self, yt_alt_oauth: YTMusic, sample_video):
         yt_alt_oauth.get_watch_playlist(sample_video)
+
+    def test_partial_credentials(self):
+        with pytest.raises(KeyError):
+            OAuthCredentials(client_id="yes")
