@@ -119,6 +119,8 @@ class TestBrowsing:
         # album with track (#8) disabled/greyed out
         album = yt.get_album("MPREb_YuigcYm2erf")
         assert album["tracks"][7]["track_number"] is None
+        # still pulls name
+        assert album["tracks"][7]["name"] == "Light in the Dark (Remix)"
 
         # missing track numbers
         album = yt.get_album("MPREb_fMX7dnwhv65")
@@ -157,6 +159,15 @@ class TestBrowsing:
         assert len(targ := album["tracks"][3]["artists"]) == 3
         # test at least album artist is filled
         assert len([x["id"] for x in targ if x["id"]]) >= 1
+
+        album = yt.get_album("MPREb_5mcWo7uUYu0")  # BABY GRAVY 2 - bbno$, Yung Gravy & BABY GRAVY
+        # presents an unavailable track instead of skipping
+        assert len(album["tracks"]) == 10
+        assert not album["tracks"][9]["available"]
+        # able to pull track name from a flex column when no menu present
+        assert album["tracks"][9]["name"] == "shining on my ex"
+        # doesn't interfere with duration parsing
+        assert album["tracks"][9]["duration_s"] == 141
 
     def test_get_song(self, config, yt, yt_oauth, sample_video):
         song = yt_oauth.get_song(config["uploads"]["private_upload_id"])  # private upload

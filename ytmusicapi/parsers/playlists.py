@@ -23,6 +23,12 @@ def parse_playlist_items(results, menu_entries: Optional[List[List]] = None, con
             "feedback_tokens": None,
         }
 
+        if not song["available"] and song["name"] is None:
+            try:
+                song["name"] = data["flexColumns"][0][MRLIFCR]["text"]["runs"][0]["text"]
+            except KeyError:
+                pass
+
         if context is None:
             song["album"] = parse_song_album(data, -1)  # liked=2 songs=3
             if "thumbnail" in data:

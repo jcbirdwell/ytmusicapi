@@ -65,6 +65,7 @@ CATEGORY_PARAMS = ["musicNavigationButtonRenderer", "clickCommand", "browseEndpo
 UNAVAILABLE = "MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT"
 MRLIR = "musicResponsiveListItemRenderer"
 MTRIR = "musicTwoRowItemRenderer"
+MRLIFCR = "musicResponsiveListItemFlexColumnRenderer"
 TASTE_PROFILE_ITEMS = ["contents", "tastebuilderRenderer", "contents"]
 TASTE_PROFILE_ARTIST = ["title", "runs"]
 SECTION_LIST_CONTINUATION = ["continuationContents", "sectionListContinuation"]
