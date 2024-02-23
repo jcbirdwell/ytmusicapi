@@ -185,8 +185,9 @@ class PlaylistsMixin(MixinProtocol):
         if "contents" in results:
             playlist["tracks"] = parse_playlist_items(results["contents"])
 
-            parse_func = lambda contents: parse_playlist_items(contents)
-            if "continuations" in results:
+            # only get continuations when available AND required
+            if "continuations" in results and (limit is None or len(playlist["tracks"]) < limit):
+                parse_func = lambda contents: parse_playlist_items(contents)
                 playlist["tracks"].extend(
                     get_continuations(
                         results, "musicPlaylistShelfContinuation", limit, request_func, parse_func

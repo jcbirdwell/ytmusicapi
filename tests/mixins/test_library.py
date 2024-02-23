@@ -65,6 +65,7 @@ class TestLibrary:
 
     def test_get_liked_songs(self, yt_brand, yt_empty, yt_oauth, liked_song_id):
         songs = yt_oauth.get_liked_songs()
+        assert len(songs["tracks"]) == 100  # no limit specified, defaults to 100, no continuations requested
         match = next((track for track in songs["tracks"] if track["video_id"] == liked_song_id), None)
         assert match is not None
         assert match["in_library"]
@@ -96,6 +97,8 @@ class TestLibrary:
         assert "actions" in response
         response = yt_auth.rate_song(sample_video, "HUH?")
         assert response is None
+        response = yt_auth.rate_song(sample_video, "LIKE")
+        assert "actions" in response
         response = yt_auth.rate_song(sample_video, "INDIFFERENT")
         assert "actions" in response
 
