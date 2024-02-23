@@ -73,3 +73,12 @@ class TestPlaylists:
         response = yt_brand.remove_playlist_items(playlist_id, playlist["tracks"])
         assert response == "STATUS_SUCCEEDED", "Playlist item removal failed"
         yt_brand.delete_playlist(playlist_id)
+
+    def test_playlist_edge_cases(self, yt):
+        test_pl = yt.get_playlist("VLPLlkifUmkICT6noeEfgsphp-t3gT9XcpTc")  # test track playlist
+        assert len(test_pl["tracks"]) == test_pl["track_count"]
+        outer = next((track for track in test_pl["tracks"] if track["video_id"] == "P57tM6HVW-Q"), None)
+        assert outer is not None
+        assert len(outer["artists"]) == 1
+        assert outer["artists"][0]["name"] == "Joey Gx"
+        assert outer["artists"][0]["id"] is None

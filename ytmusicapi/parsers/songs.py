@@ -12,7 +12,11 @@ def parse_pl_song_artists(data, index, as_album=None):
 
     artists = artists_from_runs(flex_item["text"]["runs"], 0)
     # check if track came from album without linked artists
-    if len(artists) == 1 and artists[0]["id"] is None:
+    if (
+        len(artists) == 1
+        and artists[0]["id"] is None
+        and ("&" in artists[0]["name"] or "," in artists[0]["name"])
+    ):
         # rsplit and pray that artist doesn't have an ampersand in their name
         seperated = artists[0]["name"].rsplit(" & ", 1)
         if len(seperated) == 1:
