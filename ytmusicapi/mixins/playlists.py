@@ -12,7 +12,7 @@ from ._utils import *
 
 class PlaylistsMixin(MixinProtocol):
     def get_playlist(
-        self, playlist_id: str, limit: int = 100, related: bool = False, suggestions_limit: int = 0
+        self, playlist_id: str, limit: int | None = 100, related: bool = False, suggestions_limit: int = 0
     ) -> Dict:
         """
         Returns a list of playlist items
@@ -197,7 +197,7 @@ class PlaylistsMixin(MixinProtocol):
         # playlist["duration_s"] = sum_total_duration(playlist)
         return playlist
 
-    def get_liked_songs(self, limit: int = 100) -> Dict:
+    def get_liked_songs(self, limit: int | None = 100) -> Dict:
         """
         Gets playlist items for the 'Liked Songs' playlist
 
